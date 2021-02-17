@@ -159,7 +159,7 @@ function buildMenu(pathname) {
     encoding: "utf8",
     withFileTypes: true
   };
-  
+
   try {
     let files = fs.readdirSync(pathname, readdirOptions);
     let manifestList = loadAllManifests(files, pathname);

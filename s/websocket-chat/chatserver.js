@@ -116,7 +116,7 @@ wsServer.on('request', function(request) {
     console.log("Connection from " + request.origin + " rejected.");
     return;
   }
-  
+
   // Accept the request and get a connection.
 
   var connection = request.accept("json", request.origin);
@@ -206,10 +206,10 @@ wsServer.on('request', function(request) {
           }
       }
   });
-  
+
   // Handle the WebSocket "close" event; this means a user has logged off
   // or has been disconnected.
-  
+
   connection.on('close', function(connection) {
     connectionArray = connectionArray.filter(function(el, idx, ar) {
       return el.connected;
