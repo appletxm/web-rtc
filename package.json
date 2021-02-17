@@ -2,10 +2,14 @@
   "name": "samples-server",
   "version": "1.1.0",
   "description": "Front end and menu for the MDN Web Docs sample server; used for special examples requiring back-end support",
-  "main": "index.js",
+  "main": "scripts/server.js",
   "homepage": "http://mdn-samples.mozilla.org/",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "server": "sudo node scripts/server.js",
+    "ws-server": "sudo node scripts/chatserver.js",
+    "start": "concurrently --kill-others \"npm run server\" \"npm run ws-server\"",
+    "postinstall": "cp node_modules/webrtc-adapter/out/adapter.js scripts/"
   },
   "keywords": [
     "mdn",
@@ -14,16 +18,19 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/mdn/samples-server.git"
+    "url": "https://github.com/appletxm/web-rtc.git"
   },
   "author": "Eric Shepherd / Mozilla",
-  "bugs": "https://github.com/mdn/samples-server/issues",
+  "bugs": "https://github.com/issues",
   "license": "CC0-1.0",
   "dependencies": {
     "escape-html": "^1.0.3",
     "express": "^4.16.4",
-    "ip": "^1.1.5"
+    "ip": "^1.1.5",
+    "webrtc-adapter": "^1.4.0",
+    "websocket": "^1.0.29"
   },
   "devDependencies": {
+    "concurrently": "^5.3.0"
   }
 }
