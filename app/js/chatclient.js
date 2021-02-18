@@ -12,7 +12,6 @@
 "use strict";
 
 // Get our hostname
-var alreadyLogin = false
 var myHostname = window.location.hostname;
 if (!myHostname) {
   myHostname = "localhost";
@@ -42,7 +41,9 @@ var mediaConstraints = {
   video: {
     aspectRatio: {
       ideal: 1.333333     // 3:2 aspect is preferred
-    }
+    },
+    width: 300,
+    height: 150
   }
 };
 
@@ -74,7 +75,7 @@ function log_error(text) {
 function sendToServer(msg) {
   var msgJSON = JSON.stringify(msg);
 
-  log("Sending '" + msg.type + "' message: " + msgJSON);
+  // log("Sending '" + msg.type + "' message: " + msgJSON);
   connection.send(msgJSON);
 }
 
@@ -83,8 +84,6 @@ function sendToServer(msg) {
 // this function sends a "username" message to set our username for this
 // session.
 function setUsername() {
-  myUsername = document.getElementById("name").value;
-
   sendToServer({
     name: myUsername,
     date: Date.now(),
@@ -99,6 +98,8 @@ function connect() {
   var serverUrl;
   var scheme = "ws";
 
+  myUsername = document.getElementById("name").value;
+
   // If this is an HTTPS connection, we have to use a secure WebSocket
   // connection too, so add another "s" to the scheme.
 
@@ -111,8 +112,11 @@ function connect() {
   connection = new WebSocket(serverUrl, "json");
 
   connection.onopen = function(evt) {
-    document.getElementById("text").disabled = false;
-    document.getElementById("send").disabled = false;
+    console.info('onopen evt:', evt)
+    // document.getElementById("text").disabled = false;
+    // document.getElementById("send").disabled = false;
+    document.querySelector('.login').style.display = 'none'
+    document.querySelector('.container').style.display = 'block'
   };
 
   connection.onerror = function(evt) {
@@ -120,11 +124,11 @@ function connect() {
   }
 
   connection.onmessage = function(evt) {
-    var chatBox = document.querySelector(".chatbox");
+    var chatBox = document.querySelector(".chat-content");
     var text = "";
     var msg = JSON.parse(evt.data);
-    log("Message received: ");
-    console.dir(msg);
+    // log("Message received: ");
+    // console.dir(msg);
     var time = new Date(msg.date);
     var timeStr = time.toLocaleTimeString();
 
@@ -135,7 +139,7 @@ function connect() {
         break;
 
       case "username":
-        text = "<b>User <em>" + msg.name + "</em> signed in at " + timeStr + "</b><br>";
+        text = "<em>" + msg.name + "</em> signed in at " + timeStr + "<br>";
         break;
 
       case "message":
@@ -149,12 +153,16 @@ function connect() {
         break;
 
       case "userlist":      // Received an updated user list
-        handleUserlistMsg(msg);
+        handleUserListMsg(msg);
         break;
 
       // Signaling messages: these messages are used to trade WebRTC
       // signaling information during negotiations leading up to a video
       // call.
+
+      case 'invite':
+        invite(msg.name)
+        break
 
       case "video-offer":  // Invitation and offer to chat
         handleVideoOfferMsg(msg);
@@ -192,8 +200,13 @@ function connect() {
 // Handles a click on the Send button (or pressing return/enter) by
 // building a "message" object and sending it to the server.
 function handleSendButton() {
+  var val = document.getElementById("text").value
+  if (!val) {
+    return false
+  }
+
   var msg = {
-    text: document.getElementById("text").value,
+    text: val,
     type: "message",
     id: clientID,
     date: Date.now()
@@ -207,9 +220,7 @@ function handleSendButton() {
 // to the server.
 function handleKey(evt) {
   if (evt.keyCode === 13 || evt.keyCode === 14) {
-    if (!document.getElementById("send").disabled) {
-      handleSendButton();
-    }
+    clientID !== 0 && handleSendButton();
   }
 }
 
@@ -301,8 +312,8 @@ async function handleNegotiationNeededEvent() {
 
 function handleTrackEvent(event) {
   log("*** Track event");
-  document.getElementById("received_video").srcObject = event.streams[0];
-  document.getElementById("hangup-button").disabled = false;
+  document.getElementById("video-" + targetUsername).srcObject = event.streams[0];
+  // document.getElementById("hangup-button").disabled = false;
 }
 
 // Handles |icecandidate| events by forwarding the specified
@@ -372,27 +383,47 @@ function handleICEGatheringStateChangeEvent(event) {
 // populates the user list box with those names, making each item
 // clickable to allow starting a video call.
 
-function handleUserlistMsg(msg) {
-  var i;
-  var listElem = document.querySelector(".userlistbox");
+function handleUserListMsg(msg) {
+  var listElem = document.querySelector(".chat-user-list");
+  var needOpenLocalVideo = false
 
-  // Remove all current list members. We could do this smarter,
-  // by adding and updating users instead of rebuilding from
-  // scratch but this will do for this sample.
-
-  while (listElem.firstChild) {
-    listElem.removeChild(listElem.firstChild);
-  }
+  // while (listElem.firstChild) {
+  //   listElem.removeChild(listElem.firstChild);
+  // }
 
   // Add member names from the received list.
 
   msg.users.forEach(function(username) {
-    var item = document.createElement("li");
-    item.appendChild(document.createTextNode(username));
-    item.addEventListener("click", invite, false);
+    var userCellId = 'user-' + username
+    var videoCellId = 'video-' + username
 
-    listElem.appendChild(item);
+    if (!document.querySelector('#' + userCellId)) {
+      needOpenLocalVideo = username === myUsername
+
+      var item = document.createElement("li");
+      var videoStr = `<video id="${videoCellId}" autoplay ${needOpenLocalVideo ? 'muted' : ''}></video>`
+      var nameText = `<b>${username}</b>`
+
+      item.setAttribute('id', userCellId)
+      item.innerHTML = videoStr + nameText
+      listElem.appendChild(item);
+    }
   });
+
+  if (needOpenLocalVideo) {
+    openLocalVideo()
+  }
+}
+
+async function openLocalVideo() {
+  try {
+    webcamStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+    document.getElementById("video-" + myUsername).srcObject = webcamStream;
+    // document.getElementById('test-video').srcObject = webcamStream;
+  } catch(err) {
+    handleGetUserMediaError(err);
+    return;
+  }
 }
 
 // Close the RTCPeerConnection and reset variables so that the user can
@@ -401,7 +432,7 @@ function handleUserlistMsg(msg) {
 // failure is detected.
 
 function closeVideoCall() {
-  var localVideo = document.getElementById("local_video");
+  var localVideo = document.getElementById("video-" + myUsername);
 
   log("Closing the call");
 
@@ -446,7 +477,7 @@ function closeVideoCall() {
 
   // Disable the hangup button
 
-  document.getElementById("hangup-button").disabled = true;
+  // document.getElementById("hangup-button").disabled = true;
   targetUsername = null;
 }
 
@@ -481,46 +512,22 @@ function hangUpCall() {
 // a |notificationneeded| event, so we'll let our handler for that
 // make the offer.
 
-async function invite(evt) {
-  log("Starting to prepare an invitation");
+function invite(userName) {
+  if (userName === myUsername) {
+   return false
+  }
+
+  log("Starting to prepare an invitation for " + userName);
+
   if (myPeerConnection) {
     alert("You can't start a call because you already have one open!");
   } else {
-    var clickedUsername = evt.target.textContent;
-
-    // Don't allow users to call themselves, because weird.
-
-    if (clickedUsername === myUsername) {
-      alert("I'm afraid I can't let you talk to yourself. That would be weird.");
-      return;
-    }
-
-    // Record the username being called for future reference
-
-    targetUsername = clickedUsername;
+    targetUsername = userName;
     log("Inviting user " + targetUsername);
-
-    // Call createPeerConnection() to create the RTCPeerConnection.
-    // When this returns, myPeerConnection is our RTCPeerConnection
-    // and webcamStream is a stream coming from the camera. They are
-    // not linked together in any way yet.
-
     log("Setting up connection to invite user: " + targetUsername);
     createPeerConnection();
 
-    // Get access to the webcam stream and attach it to the
-    // "preview" box (id "local_video").
-
-    try {
-      webcamStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
-      document.getElementById("local_video").srcObject = webcamStream;
-    } catch(err) {
-      handleGetUserMediaError(err);
-      return;
-    }
-
     // Add the tracks from the stream to the RTCPeerConnection
-
     try {
       webcamStream.getTracks().forEach(
         transceiver = track => myPeerConnection.addTransceiver(track, {streams: [webcamStream]})
@@ -578,7 +585,7 @@ async function handleVideoOfferMsg(msg) {
       return;
     }
 
-    document.getElementById("local_video").srcObject = webcamStream;
+    document.getElementById("video-" + targetUsername).srcObject = webcamStream;
 
     // Add the camera stream to the RTCPeerConnection
 

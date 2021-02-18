@@ -297,6 +297,13 @@ wsServer.on('request', function(request) {
               name: msg.name
             };
             connect.sendUTF(JSON.stringify(changeMsg));
+          } else {
+            connect.sendUTF(JSON.stringify({
+              id: msg.id,
+              type: "username",
+              name: msg.name,
+              date: new Date().getTime()
+            }))
           }
 
           // Set this connection's final username and send out the
@@ -306,6 +313,16 @@ wsServer.on('request', function(request) {
           connect.username = msg.name;
           sendUserListToAll();
           sendToClients = false;  // We already sent the proper responses
+
+          connectionArray.forEach(con => {
+            con.sendUTF(JSON.stringify({
+              id: msg.id,
+              type: "invite",
+              name: msg.name,
+              date: new Date().getTime()
+            }))
+          })
+
           break;
       }
 

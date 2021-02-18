@@ -9,6 +9,7 @@
     "server": "sudo node scripts/server.js",
     "ws-server": "sudo node scripts/chatserver.js",
     "start": "concurrently --kill-others \"npm run server\" \"npm run ws-server\"",
+    "debug": "sudo node scripts/server.js && sudo node --inspect scripts/chatserver.js",
     "postinstall": "cp node_modules/webrtc-adapter/out/adapter.js scripts/"
   },
   "keywords": [
