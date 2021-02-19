@@ -310,8 +310,18 @@ async function handleNegotiationNeededEvent() {
 // In our case, we're just taking the first stream found and attaching
 // it to the <video> element for incoming media.
 
+function setTrackStream() {
+  try {
+    webcamStream.getTracks().forEach(
+      transceiver = track => myPeerConnection.addTransceiver(track, {streams: [webcamStream]})
+    );
+  } catch(err) {
+    handleGetUserMediaError(err);
+  }
+}
+
 function handleTrackEvent(event) {
-  log("*** Track event");
+  log("=============*** Track event:", myUsername, ':', ("video-" + targetUsername));
   document.getElementById("video-" + targetUsername).srcObject = event.streams[0];
   // document.getElementById("hangup-button").disabled = false;
 }
@@ -377,6 +387,10 @@ function handleSignalingStateChangeEvent(event) {
 
 function handleICEGatheringStateChangeEvent(event) {
   log("*** ICE gathering state changed to: " + myPeerConnection.iceGatheringState);
+
+  // if (myPeerConnection.iceGatheringState === 'complete') {
+  //   setTrackStream()
+  // }
 }
 
 // Given a message containing a list of usernames, this function
@@ -526,16 +540,12 @@ function invite(userName) {
     log("Inviting user " + targetUsername);
     log("Setting up connection to invite user: " + targetUsername);
     createPeerConnection();
-
-    // Add the tracks from the stream to the RTCPeerConnection
-    try {
-      webcamStream.getTracks().forEach(
-        transceiver = track => myPeerConnection.addTransceiver(track, {streams: [webcamStream]})
-      );
-    } catch(err) {
-      handleGetUserMediaError(err);
-    }
   }
+
+  // setTimeout(function() {
+    // Add the tracks from the stream to the RTCPeerConnection
+    setTrackStream()
+  // }, 2000)
 }
 
 // Accept an offer to video chat. We configure our local settings,
@@ -585,7 +595,8 @@ async function handleVideoOfferMsg(msg) {
       return;
     }
 
-    document.getElementById("video-" + targetUsername).srcObject = webcamStream;
+    // document.getElementById("video-" + targetUsername).srcObject = webcamStream;
+    document.getElementById("video-" + myUsername).srcObject = webcamStream;
 
     // Add the camera stream to the RTCPeerConnection
 
