@@ -5,11 +5,14 @@
   "main": "scripts/server.js",
   "homepage": "http://mdn-samples.mozilla.org/",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "server": "sudo node scripts/server.js",
-    "ws-server": "sudo node scripts/chatserver.js",
-    "start": "concurrently --kill-others \"npm run server\" \"npm run ws-server\"",
-    "debug": "sudo node scripts/server.js && sudo node --inspect scripts/chatserver.js",
+    "clean": "rimraf build/*",
+    "server": "node scripts/server.js",
+    "ws-server": "node scripts/chatserver.js",
+    "uglify": "uglifyjs build/index.js -o build/index.min.js -c -m",
+    "rollup:watch": "rollup --config config/rollup.config.dev.js --watch",
+    "rollup:build": "rollup --config config/rollup.config.prod.js && npm run uglify",
+    "start": "npm run clean && sudo concurrently --kill-others \"npm run server\" \"npm run ws-server\" \"npm run rollup:watch\"",
+    "debug": "sudo npm run clean && node scripts/server.js && node --inspect scripts/chatserver.js && npm run rollup:watch",
     "postinstall": "cp node_modules/webrtc-adapter/out/adapter.js scripts/"
   },
   "keywords": [
@@ -32,6 +35,32 @@
     "websocket": "^1.0.29"
   },
   "devDependencies": {
-    "concurrently": "^5.3.0"
+    "@babel/cli": "^7.6.4",
+    "@babel/core": "^7.6.4",
+    "@babel/plugin-proposal-decorators": "^7.6.0",
+    "@babel/plugin-proposal-object-rest-spread": "^7.10.1",
+    "@babel/plugin-transform-runtime": "^7.6.2",
+    "@babel/preset-env": "^7.6.3",
+    "@babel/runtime-corejs3": "^7.10.2",
+    "babel-eslint": "8.0.1",
+    "concurrently": "^5.3.0",
+    "core-js": "^3.6.5",
+    "cross-env": "^6.0.3",
+    "eslint": "4.10.0",
+    "eslint-config-standard": "10.2.1",
+    "eslint-plugin-import": "2.8.0",
+    "eslint-plugin-node": "5.2.1",
+    "eslint-plugin-promise": "3.6.0",
+    "eslint-plugin-standard": "3.0.1",
+    "event-source-polyfill": "0.0.12",
+    "hex64": "^0.4.0",
+    "rimraf": "^3.0.2",
+    "rollup": "^1.24.0",
+    "rollup-plugin-babel": "^4.3.3",
+    "rollup-plugin-commonjs": "^10.1.0",
+    "rollup-plugin-eslint": "^6.0.0",
+    "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-uglify": "^6.0.3",
+    "uglifyjs": "^2.4.11"
   }
 }

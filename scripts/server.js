@@ -20,6 +20,7 @@ app.get("/", (request, response) => {
 app.use(['/assets'], express.static(path.join(__dirname, "../app/assets")));
 app.use(['/css'], express.static(path.join(__dirname, "../app/css")));
 app.use(['/js'], express.static(path.join(__dirname, "../app/js")));
+app.use(['/build'], express.static(path.join(__dirname, "../build")));
 
 // Try to load the key and certificate for HTTPS
 
@@ -38,7 +39,7 @@ try {
 let httpServer = http.createServer(app);
 httpServer.listen(httpPort, () => {
   const ip = require('ip').address()
-  console.info(`https://${ip}:${httpPort}`)
+  console.info(`https://${ip}:${httpsOptions ? '443' : httpPort}`)
 });
 httpServer.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
