@@ -59,7 +59,7 @@ const Socket = class {
     this.sendToServer({
       name: this.user.myUsername,
       date: Date.now(),
-      id: this.user.clientID,
+      id: this.user.clientId,
       type: 'username'
     })
   }

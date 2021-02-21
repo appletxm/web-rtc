@@ -3066,7 +3066,7 @@
 
 
 	    myPeerConnection.close();
-	    myPeerConnection = null;
+	    user.myPeerConnection = {};
 	    user.webcamStream = null;
 	  } // Disable the hangup button
 	  // document.getElementById('hangup-button').disabled = true;
@@ -3137,7 +3137,7 @@
 	  });
 
 	  if (needOpenLocalVideo) {
-	    openLocalVideo();
+	    openLocalVideo(user);
 	  }
 	};
 
@@ -3295,7 +3295,7 @@
 	      this.sendToServer({
 	        name: this.user.myUsername,
 	        date: now$2(),
-	        id: this.user.clientID,
+	        id: this.user.clientId,
 	        type: 'username'
 	      });
 	    }

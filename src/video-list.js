@@ -2,7 +2,7 @@ import { mediaConstraints } from './connection'
 import { handleGetUserMediaError, log } from './log'
 
 export const closeVideoCall = function(user) {
-  let { myPeerConnection, clientId } = user
+  const { myPeerConnection, clientId } = user
   var localVideo = document.getElementById('video-' + clientId)
 
   log('Closing the call')
@@ -40,7 +40,7 @@ export const closeVideoCall = function(user) {
     // Close the peer connection
 
     myPeerConnection.close()
-    myPeerConnection = null
+    user.myPeerConnection = {}
     user.webcamStream = null
   }
 
@@ -81,6 +81,6 @@ export const createVideoList = function (msg, user) {
   })
 
   if (needOpenLocalVideo) {
-    openLocalVideo()
+    openLocalVideo(user)
   }
 }
