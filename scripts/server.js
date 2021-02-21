@@ -7,6 +7,7 @@ const path = require("path");
 // const escapeHTML = require("escape-html");
 
 let httpPort = 8080;
+const httpsPort = 9000
 // const staticPath = express.static(path.join(__dirname, "app"))
 
 app.get("/", (request, response) => {
@@ -39,7 +40,7 @@ try {
 let httpServer = http.createServer(app);
 httpServer.listen(httpPort, () => {
   const ip = require('ip').address()
-  console.info(`https://${ip}:${httpsOptions ? '443' : httpPort}`)
+  console.info(`https://${ip}:${httpsOptions ? httpsPort: httpPort}`)
 });
 httpServer.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
@@ -54,6 +55,6 @@ httpServer.on("error", (err) => {
 
 if (httpsOptions) {
   let httpServer = https.createServer(httpsOptions, app);
-  httpServer.listen(443);
-  console.log("HTTPS listening on port 443");
+  httpServer.listen(httpsPort);
+  console.log(`HTTPS listening on port ${httpsPort}`);
 }

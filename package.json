@@ -7,12 +7,12 @@
   "scripts": {
     "clean": "rimraf build/*",
     "server": "node scripts/server.js",
-    "ws-server": "node scripts/chatserver.js",
+    "ws-server": "node scripts/chat-server.js",
     "uglify": "uglifyjs build/index.js -o build/index.min.js -c -m",
     "rollup:watch": "rollup --config config/rollup.config.dev.js --watch",
     "rollup:build": "rollup --config config/rollup.config.prod.js && npm run uglify",
-    "start": "npm run clean && sudo concurrently --kill-others \"npm run server\" \"npm run ws-server\" \"npm run rollup:watch\"",
-    "debug": "sudo npm run clean && node scripts/server.js && node --inspect scripts/chatserver.js && npm run rollup:watch",
+    "start": "npm run clean && concurrently --kill-others \"npm run server\" \"npm run ws-server\" \"npm run rollup:watch\"",
+    "debug": "npm run clean && concurrently --kill-others \"npm run rollup:watch\" \"node scripts/server.js\" \"node --inspect scripts/chat-server.js\"",
     "postinstall": "cp node_modules/webrtc-adapter/out/adapter.js scripts/"
   },
   "keywords": [

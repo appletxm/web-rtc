@@ -6,6 +6,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 test/unit/coverage
+yarn-lock.json
+package-lock.json
 
 deploy/
 coverage
@@ -19,4 +21,3 @@ coverage
 *.tar
 *.gz
 *.zip
-cfg.js

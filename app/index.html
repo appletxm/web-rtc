@@ -11,14 +11,11 @@
 </head>
 
 <body>
-	<script src="/build/chat-client.js"></script>
-  <script src="/js/adapter.js"></script>
-
   <div class="login">
     <div class="inner">
       <div class="input-row">
-        <input id="name" type="text" maxlength="12" required autocomplete="username" inputmode="verbatim" placeholder="please input your username" onkeyup="handleKey(event)" />
-        <button onclick="connect()">Login</button>
+        <input id="name" type="text" maxlength="12" required autocomplete="username" inputmode="verbatim" placeholder="please input your username" />
+        <button id="btn-login">Login</button>
       </div>
     </div>
   </div>
@@ -26,10 +23,6 @@
   <div class="container">
     <div class="video-box">
       <ul class="chat-user-list">
-        <!-- <li>
-          <video id="test-video" autoplay muted></video>
-          <b>test</b>
-        </li> -->
       </ul>
     </div>
     <div class="chat-box">
@@ -41,28 +34,31 @@
     </div>
   </div>
 
-	<!-- <div class="container">
-    <div class="infobox">
-      <p>Click a username in the user list to ask them to enter a one-on-one video chat with you.</p>
-      <p>Enter a username: <input id="name" type="text" maxlength="12" required autocomplete="username" inputmode="verbatim" placeholder="Username">
-        <input type="button" name="login" value="Log in" onclick="connect()"></p>
+  <!-- <div class="login">
+    <div class="inner">
+      <div class="input-row">
+        <input id="name" type="text" maxlength="12" required autocomplete="username" inputmode="verbatim" placeholder="please input your username" onkeyup="handleKey(event)" />
+        <button onclick="connect()">Login</button>
+      </div>
     </div>
-    <ul class="userlistbox"></ul>
-    <div class="chatbox"></div>
-    <div class="camerabox">
-      <video id="received_video" autoplay></video>
-      <video id="local_video" autoplay muted></video>
-      <button id="hangup-button" onclick="hangUpCall();" role="button" disabled>
-        Hang Up
-      </button>
+  </div>
+
+  <div class="container">
+    <div class="video-box">
+      <ul class="chat-user-list">
+      </ul>
     </div>
-    <div class="empty-container"></div>
-    <div class="chat-controls">
-      Chat:<br/>
-      <input id="text" type="text" name="text" size="100" maxlength="256" placeholder="Say something meaningful..." autocomplete="off" onkeyup="handleKey(event)" disabled>
-      <input type="button" id="send" name="send" value="Send" onclick="handleSendButton()" disabled>
+    <div class="chat-box">
+      <div class="chat-content"></div>
+      <div class="chat-foot">
+          <input id="text" type="text" name="text" maxlength="256" placeholder="Say something meaningful..." autocomplete="off" onkeyup="handleKey(event)">
+          <button id="send" name="send" onclick="handleSendButton()">Send</button>
+      </div>
     </div>
   </div> -->
+
+  <script src="/build/chat-client.js"></script>
+  <script src="/js/adapter.js"></script>
 </body>
 
 </html>
