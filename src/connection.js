@@ -1,8 +1,8 @@
 /* globals RTCPeerConnection, RTCIceCandidate, RTCSessionDescription */
 import { log, reportError, handleGetUserMediaError } from './log'
 import { getHostName as utilGetHostName } from './utils'
-import { closeVideoCall } from './video-list'
-import { MEDIA_CONSTRAINTS } from './consts'
+import { closeVideoCall, openLocalVideo } from './video-list'
+// import { MEDIA_CONSTRAINTS } from './consts'
 
 export const Connection = class {
   constructor(options) {
@@ -86,15 +86,20 @@ export const Connection = class {
       log('---> Sending the offer to the remote peer')
       const {username} = this.targetUserInfo
       const {socket, myUsername, clientId} = this.user
+      const targetId = this.targetUserInfo.clientId
 
-      socket.sendToServer({
-        id: clientId,
-        targetId: this.targetUserInfo.clientId,
-        name: myUsername,
-        targetUsername: username,
-        type: 'video-offer',
-        sdp: this.connect.localDescription
-      })
+      // debugger
+
+      if (clientId !== targetId && this['user']['myPeerConnection'][targetId]) {
+        socket.sendToServer({
+          id: clientId,
+          targetId,
+          name: myUsername,
+          targetUsername: username,
+          type: 'video-offer',
+          sdp: this.connect.localDescription
+        })
+      }
     } catch (err) {
       log('*** The following error occurred while handling the negotiationneeded event:')
       reportError(err)
@@ -169,19 +174,8 @@ export const Connection = class {
 
     // Get the webcam stream if we don't already have it
 
-    console.info('***8888****', this.user.clientId, this.user.webcamStream)
-
     if (!this.user.webcamStream) {
-      try {
-        this.usr.webcamStream = await navigator.mediaDevices.getUserMedia(MEDIA_CONSTRAINTS)
-      } catch (err) {
-        handleGetUserMediaError(err)
-        return
-      }
-
-      document.getElementById('video-' + this.user.clientId).srcObject = this.user.webcamStream
-
-      // this.setTrackStream()
+      this.setMediaStream()
     }
 
     log('---> Creating and sending answer to caller')
@@ -189,6 +183,9 @@ export const Connection = class {
     await this.connect.setLocalDescription(await this.connect.createAnswer())
 
     const {socket, myUsername, clientId} = this.user
+
+    // debugger
+
     socket.sendToServer({
       id: clientId,
       name: myUsername,
@@ -233,10 +230,22 @@ export const Connection = class {
     this.connect.ontrack = this.handleTrackEvent.bind(this)
   }
 
+  async setMediaStream() {
+    try {
+      // this.usr.webcamStream = await navigator.mediaDevices.getUserMedia(MEDIA_CONSTRAINTS)
+      // document.getElementById('video-' + this.user.clientId).srcObject = this.user.webcamStream
+      openLocalVideo(this.user)
+    } catch (err) {
+      handleGetUserMediaError(err)
+    }
+  }
+
   setTrackStream() {
     try {
+      if (!this.user.webcamStream) {
+        this.setMediaStream()
+      }
       this.user.webcamStream.getTracks().forEach(
-        // this.transceiver = track => this.connect.addTransceiver(track, {streams: [this.user.webcamStream]})
         track => this.connect.addTransceiver(track, {streams: [this.user.webcamStream]})
       )
     } catch (err) {
@@ -252,9 +261,6 @@ export const Connection = class {
     log('Setting up connection to invite user: ' + username)
 
     this.createPeerConnection()
-
-    // setTimeout(() => {
     this.setTrackStream()
-    // }, 1000)
   }
 }

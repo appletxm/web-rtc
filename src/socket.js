@@ -35,6 +35,8 @@ const Socket = class {
     log(`Connecting to server: ${serverUrl}`)
     this.ws = new WebSocket(serverUrl, 'json')
 
+    // console.info('=====connect===', this.ws)
+
     this.ws.onopen = (evt) => {
       console.info('onopen evt:', evt)
       document.querySelector('.login').style.display = 'none'
@@ -46,6 +48,7 @@ const Socket = class {
     }
 
     this.ws.onmessage = (evt) => {
+      // console.info('=====onmessage===', evt)
       this.handleConnectMessage(evt)
     }
   }
@@ -71,6 +74,8 @@ const Socket = class {
     var msg = JSON.parse(evt.data)
     var time = new Date(msg.date)
     var timeStr = time.toLocaleTimeString()
+
+    // console.info('-===handleConnectMessage===', msg)
 
     const { handleUserListMsg, invite, handleNewICECandidateMsg, handleVideoOfferMsg, handleVideoAnswerMsg } = this.options
 

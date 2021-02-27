@@ -757,14 +757,6 @@
 	}
 	});
 
-	function _classCallCheck(instance, Constructor) {
-	  if (!(instance instanceof Constructor)) {
-	    throw new TypeError("Cannot call a class as a function");
-	  }
-	}
-
-	var classCallCheck = _classCallCheck;
-
 	var check = function (it) {
 	  return it && it.Math == Math && it;
 	};
@@ -1086,78 +1078,52 @@
 	  }
 	};
 
-	// `Object.defineProperty` method
-	// https://tc39.es/ecma262/#sec-object.defineproperty
-	_export({ target: 'Object', stat: true, forced: !descriptors, sham: !descriptors }, {
-	  defineProperty: objectDefineProperty.f
-	});
-
-	var defineProperty_1 = createCommonjsModule(function (module) {
-	var Object = path.Object;
-
-	var defineProperty = module.exports = function defineProperty(it, key, desc) {
-	  return Object.defineProperty(it, key, desc);
+	var aFunction$1 = function (variable) {
+	  return typeof variable == 'function' ? variable : undefined;
 	};
 
-	if (Object.defineProperty.sham) defineProperty.sham = true;
+	var getBuiltIn = function (namespace, method) {
+	  return arguments.length < 2 ? aFunction$1(path[namespace]) || aFunction$1(global_1[namespace])
+	    : path[namespace] && path[namespace][method] || global_1[namespace] && global_1[namespace][method];
+	};
+
+	var engineUserAgent = getBuiltIn('navigator', 'userAgent') || '';
+
+	var slice = [].slice;
+	var MSIE = /MSIE .\./.test(engineUserAgent); // <- dirty ie9- check
+
+	var wrap = function (scheduler) {
+	  return function (handler, timeout /* , ...arguments */) {
+	    var boundArgs = arguments.length > 2;
+	    var args = boundArgs ? slice.call(arguments, 2) : undefined;
+	    return scheduler(boundArgs ? function () {
+	      // eslint-disable-next-line no-new-func -- spec requirement
+	      (typeof handler == 'function' ? handler : Function(handler)).apply(this, args);
+	    } : handler, timeout);
+	  };
+	};
+
+	// ie9- setTimeout & setInterval additional parameters fix
+	// https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers
+	_export({ global: true, bind: true, forced: MSIE }, {
+	  // `setTimeout` method
+	  // https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#dom-settimeout
+	  setTimeout: wrap(global_1.setTimeout),
+	  // `setInterval` method
+	  // https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#dom-setinterval
+	  setInterval: wrap(global_1.setInterval)
 	});
 
-	var defineProperty = defineProperty_1;
+	var setTimeout$1 = path.setTimeout;
 
-	var defineProperty$1 = defineProperty;
+	var setTimeout$2 = setTimeout$1;
 
-	function _defineProperties(target, props) {
-	  for (var i = 0; i < props.length; i++) {
-	    var descriptor = props[i];
-	    descriptor.enumerable = descriptor.enumerable || false;
-	    descriptor.configurable = true;
-	    if ("value" in descriptor) descriptor.writable = true;
-
-	    defineProperty$1(target, descriptor.key, descriptor);
-	  }
-	}
-
-	function _createClass(Constructor, protoProps, staticProps) {
-	  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
-	  if (staticProps) _defineProperties(Constructor, staticProps);
-	  return Constructor;
-	}
-
-	var createClass = _createClass;
-
-	// `IsArray` abstract operation
-	// https://tc39.es/ecma262/#sec-isarray
-	var isArray = Array.isArray || function isArray(arg) {
-	  return classofRaw(arg) == 'Array';
-	};
+	var regenerator = runtime_1;
 
 	// `ToObject` abstract operation
 	// https://tc39.es/ecma262/#sec-toobject
 	var toObject = function (argument) {
 	  return Object(requireObjectCoercible(argument));
-	};
-
-	var ceil = Math.ceil;
-	var floor = Math.floor;
-
-	// `ToInteger` abstract operation
-	// https://tc39.es/ecma262/#sec-tointeger
-	var toInteger = function (argument) {
-	  return isNaN(argument = +argument) ? 0 : (argument > 0 ? floor : ceil)(argument);
-	};
-
-	var min = Math.min;
-
-	// `ToLength` abstract operation
-	// https://tc39.es/ecma262/#sec-tolength
-	var toLength = function (argument) {
-	  return argument > 0 ? min(toInteger(argument), 0x1FFFFFFFFFFFFF) : 0; // 2 ** 53 - 1 == 9007199254740991
-	};
-
-	var createProperty = function (object, key, value) {
-	  var propertyKey = toPrimitive(key);
-	  if (propertyKey in object) objectDefineProperty.f(object, propertyKey, createPropertyDescriptor(0, value));
-	  else object[propertyKey] = value;
 	};
 
 	var isPure = true;
@@ -1191,158 +1157,6 @@
 	var uid = function (key) {
 	  return 'Symbol(' + String(key === undefined ? '' : key) + ')_' + (++id + postfix).toString(36);
 	};
-
-	var nativeSymbol = !!Object.getOwnPropertySymbols && !fails(function () {
-	  // Chrome 38 Symbol has incorrect toString conversion
-	  /* global Symbol -- required for testing */
-	  return !String(Symbol());
-	});
-
-	var useSymbolAsUid = nativeSymbol
-	  /* global Symbol -- safe */
-	  && !Symbol.sham
-	  && typeof Symbol.iterator == 'symbol';
-
-	var WellKnownSymbolsStore = shared('wks');
-	var Symbol$1 = global_1.Symbol;
-	var createWellKnownSymbol = useSymbolAsUid ? Symbol$1 : Symbol$1 && Symbol$1.withoutSetter || uid;
-
-	var wellKnownSymbol = function (name) {
-	  if (!has(WellKnownSymbolsStore, name)) {
-	    if (nativeSymbol && has(Symbol$1, name)) WellKnownSymbolsStore[name] = Symbol$1[name];
-	    else WellKnownSymbolsStore[name] = createWellKnownSymbol('Symbol.' + name);
-	  } return WellKnownSymbolsStore[name];
-	};
-
-	var SPECIES = wellKnownSymbol('species');
-
-	// `ArraySpeciesCreate` abstract operation
-	// https://tc39.es/ecma262/#sec-arrayspeciescreate
-	var arraySpeciesCreate = function (originalArray, length) {
-	  var C;
-	  if (isArray(originalArray)) {
-	    C = originalArray.constructor;
-	    // cross-realm fallback
-	    if (typeof C == 'function' && (C === Array || isArray(C.prototype))) C = undefined;
-	    else if (isObject(C)) {
-	      C = C[SPECIES];
-	      if (C === null) C = undefined;
-	    }
-	  } return new (C === undefined ? Array : C)(length === 0 ? 0 : length);
-	};
-
-	var aFunction$1 = function (variable) {
-	  return typeof variable == 'function' ? variable : undefined;
-	};
-
-	var getBuiltIn = function (namespace, method) {
-	  return arguments.length < 2 ? aFunction$1(path[namespace]) || aFunction$1(global_1[namespace])
-	    : path[namespace] && path[namespace][method] || global_1[namespace] && global_1[namespace][method];
-	};
-
-	var engineUserAgent = getBuiltIn('navigator', 'userAgent') || '';
-
-	var process = global_1.process;
-	var versions = process && process.versions;
-	var v8 = versions && versions.v8;
-	var match, version;
-
-	if (v8) {
-	  match = v8.split('.');
-	  version = match[0] + match[1];
-	} else if (engineUserAgent) {
-	  match = engineUserAgent.match(/Edge\/(\d+)/);
-	  if (!match || match[1] >= 74) {
-	    match = engineUserAgent.match(/Chrome\/(\d+)/);
-	    if (match) version = match[1];
-	  }
-	}
-
-	var engineV8Version = version && +version;
-
-	var SPECIES$1 = wellKnownSymbol('species');
-
-	var arrayMethodHasSpeciesSupport = function (METHOD_NAME) {
-	  // We can't use this feature detection in V8 since it causes
-	  // deoptimization and serious performance degradation
-	  // https://github.com/zloirock/core-js/issues/677
-	  return engineV8Version >= 51 || !fails(function () {
-	    var array = [];
-	    var constructor = array.constructor = {};
-	    constructor[SPECIES$1] = function () {
-	      return { foo: 1 };
-	    };
-	    return array[METHOD_NAME](Boolean).foo !== 1;
-	  });
-	};
-
-	var IS_CONCAT_SPREADABLE = wellKnownSymbol('isConcatSpreadable');
-	var MAX_SAFE_INTEGER = 0x1FFFFFFFFFFFFF;
-	var MAXIMUM_ALLOWED_INDEX_EXCEEDED = 'Maximum allowed index exceeded';
-
-	// We can't use this feature detection in V8 since it causes
-	// deoptimization and serious performance degradation
-	// https://github.com/zloirock/core-js/issues/679
-	var IS_CONCAT_SPREADABLE_SUPPORT = engineV8Version >= 51 || !fails(function () {
-	  var array = [];
-	  array[IS_CONCAT_SPREADABLE] = false;
-	  return array.concat()[0] !== array;
-	});
-
-	var SPECIES_SUPPORT = arrayMethodHasSpeciesSupport('concat');
-
-	var isConcatSpreadable = function (O) {
-	  if (!isObject(O)) return false;
-	  var spreadable = O[IS_CONCAT_SPREADABLE];
-	  return spreadable !== undefined ? !!spreadable : isArray(O);
-	};
-
-	var FORCED = !IS_CONCAT_SPREADABLE_SUPPORT || !SPECIES_SUPPORT;
-
-	// `Array.prototype.concat` method
-	// https://tc39.es/ecma262/#sec-array.prototype.concat
-	// with adding support of @@isConcatSpreadable and @@species
-	_export({ target: 'Array', proto: true, forced: FORCED }, {
-	  // eslint-disable-next-line no-unused-vars -- required for `.length`
-	  concat: function concat(arg) {
-	    var O = toObject(this);
-	    var A = arraySpeciesCreate(O, 0);
-	    var n = 0;
-	    var i, k, length, len, E;
-	    for (i = -1, length = arguments.length; i < length; i++) {
-	      E = i === -1 ? O : arguments[i];
-	      if (isConcatSpreadable(E)) {
-	        len = toLength(E.length);
-	        if (n + len > MAX_SAFE_INTEGER) throw TypeError(MAXIMUM_ALLOWED_INDEX_EXCEEDED);
-	        for (k = 0; k < len; k++, n++) if (k in E) createProperty(A, n, E[k]);
-	      } else {
-	        if (n >= MAX_SAFE_INTEGER) throw TypeError(MAXIMUM_ALLOWED_INDEX_EXCEEDED);
-	        createProperty(A, n++, E);
-	      }
-	    }
-	    A.length = n;
-	    return A;
-	  }
-	});
-
-	var entryVirtual = function (CONSTRUCTOR) {
-	  return path[CONSTRUCTOR + 'Prototype'];
-	};
-
-	var concat = entryVirtual('Array').concat;
-
-	var ArrayPrototype = Array.prototype;
-
-	var concat_1 = function (it) {
-	  var own = it.concat;
-	  return it === ArrayPrototype || (it instanceof Array && own === ArrayPrototype.concat) ? concat : own;
-	};
-
-	var concat$1 = concat_1;
-
-	var concat$2 = concat$1;
-
-	var regenerator = runtime_1;
 
 	var keys = shared('keys');
 
@@ -1399,6 +1213,23 @@
 	    return O;
 	  };
 	}() : undefined);
+
+	var ceil = Math.ceil;
+	var floor = Math.floor;
+
+	// `ToInteger` abstract operation
+	// https://tc39.es/ecma262/#sec-tointeger
+	var toInteger = function (argument) {
+	  return isNaN(argument = +argument) ? 0 : (argument > 0 ? floor : ceil)(argument);
+	};
+
+	var min = Math.min;
+
+	// `ToLength` abstract operation
+	// https://tc39.es/ecma262/#sec-tolength
+	var toLength = function (argument) {
+	  return argument > 0 ? min(toInteger(argument), 0x1FFFFFFFFFFFFF) : 0; // 2 ** 53 - 1 == 9007199254740991
+	};
 
 	var max = Math.max;
 	var min$1 = Math.min;
@@ -1560,14 +1391,36 @@
 	  return Properties === undefined ? result : objectDefineProperties(result, Properties);
 	};
 
+	var nativeSymbol = !!Object.getOwnPropertySymbols && !fails(function () {
+	  // Chrome 38 Symbol has incorrect toString conversion
+	  /* global Symbol -- required for testing */
+	  return !String(Symbol());
+	});
+
+	var useSymbolAsUid = nativeSymbol
+	  /* global Symbol -- safe */
+	  && !Symbol.sham
+	  && typeof Symbol.iterator == 'symbol';
+
+	var WellKnownSymbolsStore = shared('wks');
+	var Symbol$1 = global_1.Symbol;
+	var createWellKnownSymbol = useSymbolAsUid ? Symbol$1 : Symbol$1 && Symbol$1.withoutSetter || uid;
+
+	var wellKnownSymbol = function (name) {
+	  if (!has(WellKnownSymbolsStore, name)) {
+	    if (nativeSymbol && has(Symbol$1, name)) WellKnownSymbolsStore[name] = Symbol$1[name];
+	    else WellKnownSymbolsStore[name] = createWellKnownSymbol('Symbol.' + name);
+	  } return WellKnownSymbolsStore[name];
+	};
+
 	var iterators = {};
 
 	var ITERATOR = wellKnownSymbol('iterator');
-	var ArrayPrototype$1 = Array.prototype;
+	var ArrayPrototype = Array.prototype;
 
 	// check on default Array iterator
 	var isArrayIteratorMethod = function (it) {
-	  return it !== undefined && (iterators.Array === it || ArrayPrototype$1[ITERATOR] === it);
+	  return it !== undefined && (iterators.Array === it || ArrayPrototype[ITERATOR] === it);
 	};
 
 	var TO_STRING_TAG = wellKnownSymbol('toStringTag');
@@ -1713,7 +1566,7 @@
 	  return '[object ' + classof(this) + ']';
 	};
 
-	var defineProperty$2 = objectDefineProperty.f;
+	var defineProperty = objectDefineProperty.f;
 
 
 
@@ -1725,7 +1578,7 @@
 	  if (it) {
 	    var target = STATIC ? it : it.prototype;
 	    if (!has(target, TO_STRING_TAG$2)) {
-	      defineProperty$2(target, TO_STRING_TAG$2, { configurable: true, value: TAG });
+	      defineProperty(target, TO_STRING_TAG$2, { configurable: true, value: TAG });
 	    }
 	    if (SET_METHOD && !toStringTagSupport) {
 	      createNonEnumerableProperty(target, 'toString', objectToString);
@@ -1733,14 +1586,14 @@
 	  }
 	};
 
-	var SPECIES$2 = wellKnownSymbol('species');
+	var SPECIES = wellKnownSymbol('species');
 
 	var setSpecies = function (CONSTRUCTOR_NAME) {
 	  var Constructor = getBuiltIn(CONSTRUCTOR_NAME);
 	  var defineProperty = objectDefineProperty.f;
 
-	  if (descriptors && Constructor && !Constructor[SPECIES$2]) {
-	    defineProperty(Constructor, SPECIES$2, {
+	  if (descriptors && Constructor && !Constructor[SPECIES]) {
+	    defineProperty(Constructor, SPECIES, {
 	      configurable: true,
 	      get: function () { return this; }
 	    });
@@ -1801,14 +1654,14 @@
 	  return ITERATION_SUPPORT;
 	};
 
-	var SPECIES$3 = wellKnownSymbol('species');
+	var SPECIES$1 = wellKnownSymbol('species');
 
 	// `SpeciesConstructor` abstract operation
 	// https://tc39.es/ecma262/#sec-speciesconstructor
 	var speciesConstructor = function (O, defaultConstructor) {
 	  var C = anObject(O).constructor;
 	  var S;
-	  return C === undefined || (S = anObject(C)[SPECIES$3]) == undefined ? defaultConstructor : aFunction(S);
+	  return C === undefined || (S = anObject(C)[SPECIES$1]) == undefined ? defaultConstructor : aFunction(S);
 	};
 
 	var engineIsIos = /(iphone|ipod|ipad).*applewebkit/i.test(engineUserAgent);
@@ -1818,7 +1671,7 @@
 	var location = global_1.location;
 	var set = global_1.setImmediate;
 	var clear = global_1.clearImmediate;
-	var process$1 = global_1.process;
+	var process = global_1.process;
 	var MessageChannel = global_1.MessageChannel;
 	var Dispatch = global_1.Dispatch;
 	var counter = 0;
@@ -1869,7 +1722,7 @@
 	  // Node.js 0.8-
 	  if (engineIsNode) {
 	    defer = function (id) {
-	      process$1.nextTick(runner(id));
+	      process.nextTick(runner(id));
 	    };
 	  // Sphere (JS game engine) Dispatch API
 	  } else if (Dispatch && Dispatch.now) {
@@ -1925,7 +1778,7 @@
 
 	var MutationObserver = global_1.MutationObserver || global_1.WebKitMutationObserver;
 	var document$2 = global_1.document;
-	var process$2 = global_1.process;
+	var process$1 = global_1.process;
 	var Promise$1 = global_1.Promise;
 	// Node.js 11 shows ExperimentalWarning on getting `queueMicrotask`
 	var queueMicrotaskDescriptor = getOwnPropertyDescriptor$2(global_1, 'queueMicrotask');
@@ -1937,7 +1790,7 @@
 	if (!queueMicrotask) {
 	  flush = function () {
 	    var parent, fn;
-	    if (engineIsNode && (parent = process$2.domain)) parent.exit();
+	    if (engineIsNode && (parent = process$1.domain)) parent.exit();
 	    while (head) {
 	      fn = head.fn;
 	      head = head.next;
@@ -1972,7 +1825,7 @@
 	  // Node.js without promises
 	  } else if (engineIsNode) {
 	    notify = function () {
-	      process$2.nextTick(flush);
+	      process$1.nextTick(flush);
 	    };
 	  // for other environments - macrotask based on:
 	  // - setImmediate
@@ -2101,6 +1954,24 @@
 	  getterFor: getterFor
 	};
 
+	var process$2 = global_1.process;
+	var versions = process$2 && process$2.versions;
+	var v8 = versions && versions.v8;
+	var match, version;
+
+	if (v8) {
+	  match = v8.split('.');
+	  version = match[0] + match[1];
+	} else if (engineUserAgent) {
+	  match = engineUserAgent.match(/Edge\/(\d+)/);
+	  if (!match || match[1] >= 74) {
+	    match = engineUserAgent.match(/Chrome\/(\d+)/);
+	    if (match) version = match[1];
+	  }
+	}
+
+	var engineV8Version = version && +version;
+
 	var task$1 = task.set;
 
 
@@ -2113,7 +1984,7 @@
 
 
 
-	var SPECIES$4 = wellKnownSymbol('species');
+	var SPECIES$2 = wellKnownSymbol('species');
 	var PROMISE = 'Promise';
 	var getInternalState = internalState.get;
 	var setInternalState = internalState.set;
@@ -2136,7 +2007,7 @@
 	var UNHANDLED = 2;
 	var Internal, OwnPromiseCapability, PromiseWrapper;
 
-	var FORCED$1 = isForced_1(PROMISE, function () {
+	var FORCED = isForced_1(PROMISE, function () {
 	  var GLOBAL_CORE_JS_PROMISE = inspectSource(PromiseConstructor) !== String(PromiseConstructor);
 	  if (!GLOBAL_CORE_JS_PROMISE) {
 	    // V8 6.6 (Node 10 and Chrome 66) have a bug with resolving custom thenables
@@ -2158,11 +2029,11 @@
 	    exec(function () { /* empty */ }, function () { /* empty */ });
 	  };
 	  var constructor = promise.constructor = {};
-	  constructor[SPECIES$4] = FakePromise;
+	  constructor[SPECIES$2] = FakePromise;
 	  return !(promise.then(function () { /* empty */ }) instanceof FakePromise);
 	});
 
-	var INCORRECT_ITERATION = FORCED$1 || !checkCorrectnessOfIteration(function (iterable) {
+	var INCORRECT_ITERATION = FORCED || !checkCorrectnessOfIteration(function (iterable) {
 	  PromiseConstructor.all(iterable)['catch'](function () { /* empty */ });
 	});
 
@@ -2310,7 +2181,7 @@
 	};
 
 	// constructor polyfill
-	if (FORCED$1) {
+	if (FORCED) {
 	  // 25.4.3.1 Promise(executor)
 	  PromiseConstructor = function Promise(executor) {
 	    anInstance(this, PromiseConstructor, PROMISE);
@@ -2370,7 +2241,7 @@
 	  };
 	}
 
-	_export({ global: true, wrap: true, forced: FORCED$1 }, {
+	_export({ global: true, wrap: true, forced: FORCED }, {
 	  Promise: PromiseConstructor
 	});
 
@@ -2380,7 +2251,7 @@
 	PromiseWrapper = getBuiltIn(PROMISE);
 
 	// statics
-	_export({ target: PROMISE, stat: true, forced: FORCED$1 }, {
+	_export({ target: PROMISE, stat: true, forced: FORCED }, {
 	  // `Promise.reject` method
 	  // https://tc39.es/ecma262/#sec-promise.reject
 	  reject: function reject(r) {
@@ -2870,6 +2741,164 @@
 
 	var asyncToGenerator = _asyncToGenerator;
 
+	function _classCallCheck(instance, Constructor) {
+	  if (!(instance instanceof Constructor)) {
+	    throw new TypeError("Cannot call a class as a function");
+	  }
+	}
+
+	var classCallCheck = _classCallCheck;
+
+	// `Object.defineProperty` method
+	// https://tc39.es/ecma262/#sec-object.defineproperty
+	_export({ target: 'Object', stat: true, forced: !descriptors, sham: !descriptors }, {
+	  defineProperty: objectDefineProperty.f
+	});
+
+	var defineProperty_1 = createCommonjsModule(function (module) {
+	var Object = path.Object;
+
+	var defineProperty = module.exports = function defineProperty(it, key, desc) {
+	  return Object.defineProperty(it, key, desc);
+	};
+
+	if (Object.defineProperty.sham) defineProperty.sham = true;
+	});
+
+	var defineProperty$1 = defineProperty_1;
+
+	var defineProperty$2 = defineProperty$1;
+
+	function _defineProperties(target, props) {
+	  for (var i = 0; i < props.length; i++) {
+	    var descriptor = props[i];
+	    descriptor.enumerable = descriptor.enumerable || false;
+	    descriptor.configurable = true;
+	    if ("value" in descriptor) descriptor.writable = true;
+
+	    defineProperty$2(target, descriptor.key, descriptor);
+	  }
+	}
+
+	function _createClass(Constructor, protoProps, staticProps) {
+	  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
+	  if (staticProps) _defineProperties(Constructor, staticProps);
+	  return Constructor;
+	}
+
+	var createClass = _createClass;
+
+	// `IsArray` abstract operation
+	// https://tc39.es/ecma262/#sec-isarray
+	var isArray = Array.isArray || function isArray(arg) {
+	  return classofRaw(arg) == 'Array';
+	};
+
+	var createProperty = function (object, key, value) {
+	  var propertyKey = toPrimitive(key);
+	  if (propertyKey in object) objectDefineProperty.f(object, propertyKey, createPropertyDescriptor(0, value));
+	  else object[propertyKey] = value;
+	};
+
+	var SPECIES$3 = wellKnownSymbol('species');
+
+	// `ArraySpeciesCreate` abstract operation
+	// https://tc39.es/ecma262/#sec-arrayspeciescreate
+	var arraySpeciesCreate = function (originalArray, length) {
+	  var C;
+	  if (isArray(originalArray)) {
+	    C = originalArray.constructor;
+	    // cross-realm fallback
+	    if (typeof C == 'function' && (C === Array || isArray(C.prototype))) C = undefined;
+	    else if (isObject(C)) {
+	      C = C[SPECIES$3];
+	      if (C === null) C = undefined;
+	    }
+	  } return new (C === undefined ? Array : C)(length === 0 ? 0 : length);
+	};
+
+	var SPECIES$4 = wellKnownSymbol('species');
+
+	var arrayMethodHasSpeciesSupport = function (METHOD_NAME) {
+	  // We can't use this feature detection in V8 since it causes
+	  // deoptimization and serious performance degradation
+	  // https://github.com/zloirock/core-js/issues/677
+	  return engineV8Version >= 51 || !fails(function () {
+	    var array = [];
+	    var constructor = array.constructor = {};
+	    constructor[SPECIES$4] = function () {
+	      return { foo: 1 };
+	    };
+	    return array[METHOD_NAME](Boolean).foo !== 1;
+	  });
+	};
+
+	var IS_CONCAT_SPREADABLE = wellKnownSymbol('isConcatSpreadable');
+	var MAX_SAFE_INTEGER = 0x1FFFFFFFFFFFFF;
+	var MAXIMUM_ALLOWED_INDEX_EXCEEDED = 'Maximum allowed index exceeded';
+
+	// We can't use this feature detection in V8 since it causes
+	// deoptimization and serious performance degradation
+	// https://github.com/zloirock/core-js/issues/679
+	var IS_CONCAT_SPREADABLE_SUPPORT = engineV8Version >= 51 || !fails(function () {
+	  var array = [];
+	  array[IS_CONCAT_SPREADABLE] = false;
+	  return array.concat()[0] !== array;
+	});
+
+	var SPECIES_SUPPORT = arrayMethodHasSpeciesSupport('concat');
+
+	var isConcatSpreadable = function (O) {
+	  if (!isObject(O)) return false;
+	  var spreadable = O[IS_CONCAT_SPREADABLE];
+	  return spreadable !== undefined ? !!spreadable : isArray(O);
+	};
+
+	var FORCED$1 = !IS_CONCAT_SPREADABLE_SUPPORT || !SPECIES_SUPPORT;
+
+	// `Array.prototype.concat` method
+	// https://tc39.es/ecma262/#sec-array.prototype.concat
+	// with adding support of @@isConcatSpreadable and @@species
+	_export({ target: 'Array', proto: true, forced: FORCED$1 }, {
+	  // eslint-disable-next-line no-unused-vars -- required for `.length`
+	  concat: function concat(arg) {
+	    var O = toObject(this);
+	    var A = arraySpeciesCreate(O, 0);
+	    var n = 0;
+	    var i, k, length, len, E;
+	    for (i = -1, length = arguments.length; i < length; i++) {
+	      E = i === -1 ? O : arguments[i];
+	      if (isConcatSpreadable(E)) {
+	        len = toLength(E.length);
+	        if (n + len > MAX_SAFE_INTEGER) throw TypeError(MAXIMUM_ALLOWED_INDEX_EXCEEDED);
+	        for (k = 0; k < len; k++, n++) if (k in E) createProperty(A, n, E[k]);
+	      } else {
+	        if (n >= MAX_SAFE_INTEGER) throw TypeError(MAXIMUM_ALLOWED_INDEX_EXCEEDED);
+	        createProperty(A, n++, E);
+	      }
+	    }
+	    A.length = n;
+	    return A;
+	  }
+	});
+
+	var entryVirtual = function (CONSTRUCTOR) {
+	  return path[CONSTRUCTOR + 'Prototype'];
+	};
+
+	var concat = entryVirtual('Array').concat;
+
+	var ArrayPrototype$1 = Array.prototype;
+
+	var concat_1 = function (it) {
+	  var own = it.concat;
+	  return it === ArrayPrototype$1 || (it instanceof Array && own === ArrayPrototype$1.concat) ? concat : own;
+	};
+
+	var concat$1 = concat_1;
+
+	var concat$2 = concat$1;
+
 	var push = [].push;
 
 	// `Array.prototype.{ forEach, map, filter, some, every, find, findIndex, filterOut }` methods implementation
@@ -3086,7 +3115,6 @@
 	};
 	var openLocalVideo = /*#__PURE__*/function () {
 	  var _ref = asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee(user) {
-	    var webcamStream;
 	    return regenerator.wrap(function _callee$(_context3) {
 	      while (1) {
 	        switch (_context3.prev = _context3.next) {
@@ -3096,62 +3124,83 @@
 	            return navigator.mediaDevices.getUserMedia(MEDIA_CONSTRAINTS);
 
 	          case 3:
-	            webcamStream = _context3.sent;
-	            user.webcamStream = webcamStream;
+	            user.webcamStream = _context3.sent;
 	            document.getElementById('video-' + user.clientId).srcObject = user.webcamStream;
-	            _context3.next = 11;
+	            _context3.next = 10;
 	            break;
 
-	          case 8:
-	            _context3.prev = 8;
+	          case 7:
+	            _context3.prev = 7;
 	            _context3.t0 = _context3["catch"](0);
 	            handleGetUserMediaError(_context3.t0, function (user) {
 	              closeVideoCall(user);
 	            });
 
-	          case 11:
+	          case 10:
 	          case "end":
 	            return _context3.stop();
 	        }
 	      }
-	    }, _callee, null, [[0, 8]]);
+	    }, _callee, null, [[0, 7]]);
 	  }));
 
 	  return function openLocalVideo(_x) {
 	    return _ref.apply(this, arguments);
 	  };
 	}();
-	var createVideoList = function createVideoList(msg, user) {
-	  var _context4;
+	var createVideoList = /*#__PURE__*/function () {
+	  var _ref2 = asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee2(msg, user) {
+	    var _context4;
 
-	  var listElem = document.querySelector('.chat-user-list');
-	  var needOpenLocalVideo = false;
+	    var listElem, needOpenLocalVideo;
+	    return regenerator.wrap(function _callee2$(_context6) {
+	      while (1) {
+	        switch (_context6.prev = _context6.next) {
+	          case 0:
+	            listElem = document.querySelector('.chat-user-list');
+	            needOpenLocalVideo = false;
 
-	  forEach$2(_context4 = msg.users).call(_context4, function (userItem) {
-	    var userCellId = 'user-' + userItem.clientId;
-	    var videoCellId = 'video-' + userItem.clientId;
+	            forEach$2(_context4 = msg.users).call(_context4, function (userItem) {
+	              var userCellId = 'user-' + userItem.clientId;
+	              var videoCellId = 'video-' + userItem.clientId;
 
-	    if (!document.querySelector('#' + userCellId)) {
-	      var _context5;
+	              if (!document.querySelector('#' + userCellId)) {
+	                var _context5;
 
-	      needOpenLocalVideo = userItem.clientId === user.clientId;
-	      var item = document.createElement('li');
+	                needOpenLocalVideo = userItem.clientId === user.clientId;
+	                var item = document.createElement('li');
 
-	      var videoStr = concat$2(_context5 = "<video id='".concat(videoCellId, "' autoplay ")).call(_context5, needOpenLocalVideo ? 'muted' : '', "></video>");
+	                var videoStr = concat$2(_context5 = "<video id='".concat(videoCellId, "' autoplay ")).call(_context5, needOpenLocalVideo ? 'muted' : '', "></video>");
 
-	      var nameText = "<b>".concat(userItem.username, "</b>");
-	      item.setAttribute('id', userCellId);
-	      item.innerHTML = videoStr + nameText;
-	      listElem.appendChild(item);
-	    }
-	  });
+	                var nameText = "<b>".concat(userItem.username, "</b>");
+	                item.setAttribute('id', userCellId);
+	                item.innerHTML = videoStr + nameText;
+	                listElem.appendChild(item);
+	              }
+	            });
 
-	  if (needOpenLocalVideo) {
-	    openLocalVideo(user);
-	  }
-	};
+	            if (!needOpenLocalVideo) {
+	              _context6.next = 6;
+	              break;
+	            }
 
-	var slice = [].slice;
+	            _context6.next = 6;
+	            return openLocalVideo(user);
+
+	          case 6:
+	          case "end":
+	            return _context6.stop();
+	        }
+	      }
+	    }, _callee2);
+	  }));
+
+	  return function createVideoList(_x2, _x3) {
+	    return _ref2.apply(this, arguments);
+	  };
+	}();
+
+	var slice$1 = [].slice;
 	var factories = {};
 
 	var construct = function (C, argsLength, args) {
@@ -3166,9 +3215,9 @@
 	// https://tc39.es/ecma262/#sec-function.prototype.bind
 	var functionBind = Function.bind || function bind(that /* , ...args */) {
 	  var fn = aFunction(this);
-	  var partArgs = slice.call(arguments, 1);
+	  var partArgs = slice$1.call(arguments, 1);
 	  var boundFunction = function bound(/* args... */) {
-	    var args = partArgs.concat(slice.call(arguments));
+	    var args = partArgs.concat(slice$1.call(arguments));
 	    return this instanceof boundFunction ? construct(fn, args.length, args) : fn.apply(that, args);
 	  };
 	  if (isObject(fn.prototype)) boundFunction.prototype = fn.prototype;
@@ -3315,7 +3364,7 @@
 	    key: "handleNegotiationNeededEvent",
 	    value: function () {
 	      var _handleNegotiationNeededEvent = asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee() {
-	        var offer, username, _this$user, socket, myUsername, clientId;
+	        var offer, username, _this$user, socket, myUsername, clientId, targetId;
 
 	        return regenerator.wrap(function _callee$(_context) {
 	          while (1) {
@@ -3350,29 +3399,34 @@
 	                log('---> Sending the offer to the remote peer');
 	                username = this.targetUserInfo.username;
 	                _this$user = this.user, socket = _this$user.socket, myUsername = _this$user.myUsername, clientId = _this$user.clientId;
-	                socket.sendToServer({
-	                  id: clientId,
-	                  targetId: this.targetUserInfo.clientId,
-	                  name: myUsername,
-	                  targetUsername: username,
-	                  type: 'video-offer',
-	                  sdp: this.connect.localDescription
-	                });
-	                _context.next = 22;
+	                targetId = this.targetUserInfo.clientId; // debugger
+
+	                if (clientId !== targetId && this['user']['myPeerConnection'][targetId]) {
+	                  socket.sendToServer({
+	                    id: clientId,
+	                    targetId: targetId,
+	                    name: myUsername,
+	                    targetUsername: username,
+	                    type: 'video-offer',
+	                    sdp: this.connect.localDescription
+	                  });
+	                }
+
+	                _context.next = 23;
 	                break;
 
-	              case 18:
-	                _context.prev = 18;
+	              case 19:
+	                _context.prev = 19;
 	                _context.t0 = _context["catch"](1);
 	                log('*** The following error occurred while handling the negotiationneeded event:');
 	                reportError(_context.t0);
 
-	              case 22:
+	              case 23:
 	              case "end":
 	                return _context.stop();
 	            }
 	          }
-	        }, _callee, this, [[1, 18]]);
+	        }, _callee, this, [[1, 19]]);
 	      }));
 
 	      function handleNegotiationNeededEvent() {
@@ -3487,44 +3541,23 @@
 
 	              case 14:
 	                // Get the webcam stream if we don't already have it
-	                console.info('***8888****', this.user.clientId, this.user.webcamStream);
-
-	                if (this.user.webcamStream) {
-	                  _context3.next = 27;
-	                  break;
+	                if (!this.user.webcamStream) {
+	                  this.setMediaStream();
 	                }
 
-	                _context3.prev = 16;
-	                _context3.next = 19;
-	                return navigator.mediaDevices.getUserMedia(MEDIA_CONSTRAINTS);
-
-	              case 19:
-	                this.usr.webcamStream = _context3.sent;
-	                _context3.next = 26;
-	                break;
-
-	              case 22:
-	                _context3.prev = 22;
-	                _context3.t0 = _context3["catch"](16);
-	                handleGetUserMediaError(_context3.t0);
-	                return _context3.abrupt("return");
-
-	              case 26:
-	                document.getElementById('video-' + this.user.clientId).srcObject = this.user.webcamStream; // this.setTrackStream()
-
-	              case 27:
 	                log('---> Creating and sending answer to caller');
-	                _context3.t1 = this.connect;
-	                _context3.next = 31;
+	                _context3.t0 = this.connect;
+	                _context3.next = 19;
 	                return this.connect.createAnswer();
 
-	              case 31:
-	                _context3.t2 = _context3.sent;
-	                _context3.next = 34;
-	                return _context3.t1.setLocalDescription.call(_context3.t1, _context3.t2);
+	              case 19:
+	                _context3.t1 = _context3.sent;
+	                _context3.next = 22;
+	                return _context3.t0.setLocalDescription.call(_context3.t0, _context3.t1);
 
-	              case 34:
-	                _this$user2 = this.user, socket = _this$user2.socket, myUsername = _this$user2.myUsername, clientId = _this$user2.clientId;
+	              case 22:
+	                _this$user2 = this.user, socket = _this$user2.socket, myUsername = _this$user2.myUsername, clientId = _this$user2.clientId; // debugger
+
 	                socket.sendToServer({
 	                  id: clientId,
 	                  name: myUsername,
@@ -3534,12 +3567,12 @@
 	                  sdp: this.connect.localDescription
 	                });
 
-	              case 36:
+	              case 24:
 	              case "end":
 	                return _context3.stop();
 	            }
 	          }
-	        }, _callee3, this, [[16, 22]]);
+	        }, _callee3, this);
 	      }));
 
 	      function handleVideoOfferMsg(_x2) {
@@ -3623,15 +3656,48 @@
 	      return createPeerConnection;
 	    }()
 	  }, {
+	    key: "setMediaStream",
+	    value: function () {
+	      var _setMediaStream = asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee6() {
+	        return regenerator.wrap(function _callee6$(_context12) {
+	          while (1) {
+	            switch (_context12.prev = _context12.next) {
+	              case 0:
+	                try {
+	                  // this.usr.webcamStream = await navigator.mediaDevices.getUserMedia(MEDIA_CONSTRAINTS)
+	                  // document.getElementById('video-' + this.user.clientId).srcObject = this.user.webcamStream
+	                  openLocalVideo(this.user);
+	                } catch (err) {
+	                  handleGetUserMediaError(err);
+	                }
+
+	              case 1:
+	              case "end":
+	                return _context12.stop();
+	            }
+	          }
+	        }, _callee6, this);
+	      }));
+
+	      function setMediaStream() {
+	        return _setMediaStream.apply(this, arguments);
+	      }
+
+	      return setMediaStream;
+	    }()
+	  }, {
 	    key: "setTrackStream",
 	    value: function setTrackStream() {
 	      var _this = this;
 
 	      try {
-	        var _context12;
+	        var _context13;
 
-	        forEach$2(_context12 = this.user.webcamStream.getTracks()).call(_context12, // this.transceiver = track => this.connect.addTransceiver(track, {streams: [this.user.webcamStream]})
-	        function (track) {
+	        if (!this.user.webcamStream) {
+	          this.setMediaStream();
+	        }
+
+	        forEach$2(_context13 = this.user.webcamStream.getTracks()).call(_context13, function (track) {
 	          return _this.connect.addTransceiver(track, {
 	            streams: [_this.user.webcamStream]
 	          });
@@ -3648,9 +3714,8 @@
 	      var username = this.targetUserInfo.username;
 	      log('Inviting user ' + username);
 	      log('Setting up connection to invite user: ' + username);
-	      this.createPeerConnection(); // setTimeout(() => {
-
-	      this.setTrackStream(); // }, 1000)
+	      this.createPeerConnection();
+	      this.setTrackStream();
 	    }
 	  }]);
 
@@ -3683,9 +3748,29 @@
 	    }
 	  }, {
 	    key: "createUserList",
-	    value: function createUserList(msg) {
-	      createVideoList(msg, this);
-	    }
+	    value: function () {
+	      var _createUserList = asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee(msg) {
+	        return regenerator.wrap(function _callee$(_context) {
+	          while (1) {
+	            switch (_context.prev = _context.next) {
+	              case 0:
+	                _context.next = 2;
+	                return createVideoList(msg, this);
+
+	              case 2:
+	              case "end":
+	                return _context.stop();
+	            }
+	          }
+	        }, _callee, this);
+	      }));
+
+	      function createUserList(_x) {
+	        return _createUserList.apply(this, arguments);
+	      }
+
+	      return createUserList;
+	    }()
 	  }, {
 	    key: "createPeerConnection",
 	    value: function createPeerConnection(targetUserInfo) {
@@ -3699,20 +3784,25 @@
 	  }, {
 	    key: "invite",
 	    value: function invite(msg) {
-	      var id = msg.id,
-	          name = msg.name;
+	      var _this = this;
 
-	      if (id === this.clientId) {
-	        return false;
-	      }
+	      setTimeout$2(function () {
+	        var id = msg.id,
+	            name = msg.name;
 
-	      if (!this.myPeerConnection[id]) {
-	        var targetUserInfo = {
-	          clientId: id,
-	          username: name
-	        };
-	        this.createPeerConnection(targetUserInfo);
-	      }
+	        if (id === _this.clientId) {
+	          return false;
+	        }
+
+	        if (!_this.myPeerConnection[id]) {
+	          var targetUserInfo = {
+	            clientId: id,
+	            username: name
+	          };
+
+	          _this.createPeerConnection(targetUserInfo);
+	        }
+	      }, 3000);
 	    }
 	  }, {
 	    key: "handleNewICECandidateMsg",
@@ -3735,7 +3825,6 @@
 	      }
 
 	      var peerCon = this['myPeerConnection'][id];
-	      debugger;
 
 	      if (peerCon) {
 	        peerCon.handleVideoOfferMsg(msg);
@@ -3752,24 +3841,16 @@
 	  }, {
 	    key: "handleVideoAnswerMsg",
 	    value: function handleVideoAnswerMsg(msg) {
-	      var id = msg.id,
-	          name = msg.name;
+	      var id = msg.id;
 
 	      if (id === this.clientId) {
 	        return false;
 	      }
 
-	      var peerCon = this['myPeerConnection'][id];
-	      var offer = this['offers'][id];
-	      debugger;
+	      var peerCon = this['myPeerConnection'][id]; // let offer = this['offers'][id]
 
-	      if (peerCon && offer) {
+	      if (peerCon) {
 	        peerCon.handleVideoAnswerMsg(msg);
-	      } else {
-	        this.createPeerConnection({
-	          clientId: id,
-	          username: name
-	        });
 	      }
 	    }
 	  }]);
@@ -3828,7 +3909,7 @@
 
 	      serverUrl = scheme + '://' + this.myHostname + ':6503';
 	      log("Connecting to server: ".concat(serverUrl));
-	      this.ws = new WebSocket(serverUrl, 'json');
+	      this.ws = new WebSocket(serverUrl, 'json'); // console.info('=====connect===', this.ws)
 
 	      this.ws.onopen = function (evt) {
 	        console.info('onopen evt:', evt);
@@ -3841,6 +3922,7 @@
 	      };
 
 	      this.ws.onmessage = function (evt) {
+	        // console.info('=====onmessage===', evt)
 	        _this.handleConnectMessage(evt);
 	      };
 	    }
@@ -3869,7 +3951,8 @@
 	      var text = '';
 	      var msg = JSON.parse(evt.data);
 	      var time = new Date(msg.date);
-	      var timeStr = time.toLocaleTimeString();
+	      var timeStr = time.toLocaleTimeString(); // console.info('-===handleConnectMessage===', msg)
+
 	      var _this$options = this.options,
 	          handleUserListMsg = _this$options.handleUserListMsg,
 	          invite = _this$options.invite,
@@ -3998,6 +4081,7 @@
 	      socket.connect();
 	    },
 	    loginEvent: function loginEvent(opts) {
+	      // console.info('-===loginEvent===', opts)
 	      user.setUserName(opts.userName);
 	      socket.connect();
 	    }

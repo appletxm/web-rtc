@@ -21,8 +21,8 @@ const User = class {
     this.myUsername = name
   }
 
-  createUserList(msg) {
-    createVideoList(msg, this)
+  async createUserList(msg) {
+    await createVideoList(msg, this)
   }
 
   createPeerConnection(targetUserInfo) {
@@ -35,18 +35,20 @@ const User = class {
   }
 
   invite(msg) {
-    const {id, name} = msg
-    if (id === this.clientId) {
-      return false
-    }
-
-    if (!this.myPeerConnection[id]) {
-      const targetUserInfo = {
-        clientId: id,
-        username: name
+    setTimeout(() => {
+      const {id, name} = msg
+      if (id === this.clientId) {
+        return false
       }
-      this.createPeerConnection(targetUserInfo)
-    }
+
+      if (!this.myPeerConnection[id]) {
+        const targetUserInfo = {
+          clientId: id,
+          username: name
+        }
+        this.createPeerConnection(targetUserInfo)
+      }
+    }, 3000)
   }
 
   handleNewICECandidateMsg(msg) {
@@ -66,8 +68,6 @@ const User = class {
 
     let peerCon = this['myPeerConnection'][id]
 
-    debugger
-
     if (peerCon) {
       peerCon.handleVideoOfferMsg(msg)
     } else {
@@ -82,24 +82,17 @@ const User = class {
   }
 
   handleVideoAnswerMsg(msg) {
-    const { id, name } = msg
+    const { id } = msg
 
     if (id === this.clientId) {
       return false
     }
 
     const peerCon = this['myPeerConnection'][id]
-    let offer = this['offers'][id]
+    // let offer = this['offers'][id]
 
-    debugger
-
-    if (peerCon && offer) {
+    if (peerCon) {
       peerCon.handleVideoAnswerMsg(msg)
-    } else {
-      this.createPeerConnection({
-        clientId: id,
-        username: name
-      })
     }
   }
 }

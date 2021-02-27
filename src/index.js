@@ -35,6 +35,7 @@ function bootStrap() {
       socket.connect()
     },
     loginEvent(opts) {
+      // console.info('-===loginEvent===', opts)
       user.setUserName(opts.userName)
       socket.connect()
     }

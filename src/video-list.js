@@ -58,8 +58,7 @@ export const closeVideoCall = function(user, targetUserInfo) {
 }
 export const openLocalVideo = async function(user) {
   try {
-    var webcamStream = await navigator.mediaDevices.getUserMedia(MEDIA_CONSTRAINTS)
-    user.webcamStream = webcamStream
+    user.webcamStream = await navigator.mediaDevices.getUserMedia(MEDIA_CONSTRAINTS)
     document.getElementById('video-' + user.clientId).srcObject = user.webcamStream
   } catch (err) {
     handleGetUserMediaError(err, function(user) {
@@ -67,7 +66,7 @@ export const openLocalVideo = async function(user) {
     })
   }
 }
-export const createVideoList = function (msg, user) {
+export const createVideoList = async function (msg, user) {
   var listElem = document.querySelector('.chat-user-list')
   var needOpenLocalVideo = false
 
@@ -89,6 +88,6 @@ export const createVideoList = function (msg, user) {
   })
 
   if (needOpenLocalVideo) {
-    openLocalVideo(user)
+    await openLocalVideo(user)
   }
 }
