@@ -7,7 +7,8 @@ module.exports = {
     'generator-star-spacing': 0,
     // allow debugger during development
     'space-before-function-paren': 0,
-    'no-debugger': process.env.NODE_ENV === 'production' ? 2 : 0
+    'no-debugger': process.env.NODE_ENV === 'production' ? 2 : 0,
+    "accessor-pairs": "error"
   },
   env: {
     es6: true

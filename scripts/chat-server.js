@@ -78,12 +78,12 @@ function isUsernameUnique(name) {
 // Sends a message (which is already stringified JSON) to a single
 // user, given their username. We use this for the WebRTC signaling,
 // and we could use it for private text messaging.
-function sendToOneUser(target, msgString) {
+function sendToOneUser(target, id, msgString) {
   var isUnique = true;
   var i;
 
   for (i=0; i<connectionArray.length; i++) {
-    if (connectionArray[i].username === target) {
+    if (connectionArray[i].clientId === id) {
       connectionArray[i].sendUTF(msgString);
       break;
     }
@@ -120,7 +120,11 @@ function makeUserListMessage() {
   // Add the users to the list
 
   for (i=0; i<connectionArray.length; i++) {
-    userListMsg.users.push(connectionArray[i].username);
+    const {username, clientId} = connectionArray[i]
+    userListMsg.users.push({
+      username,
+      clientId
+    });
   }
 
   return userListMsg;
@@ -339,7 +343,7 @@ wsServer.on('request', function(request) {
         // If the message specifies a target username, only send the
         // message to them. Otherwise, send it to every user.
         if (msg.target && msg.target !== undefined && msg.target.length !== 0) {
-          sendToOneUser(msg.target, msgString);
+          sendToOneUser(msg.target, msg.id, msgString);
         } else {
           for (i=0; i<connectionArray.length; i++) {
             connectionArray[i].sendUTF(msgString);

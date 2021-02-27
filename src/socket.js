@@ -1,24 +1,25 @@
 /* globals WebSocket */
 
 import { log, logError } from './log'
+import { getHostName as utilGetHostName } from './utils'
 
 const Socket = class {
   constructor(options) {
+    const {exploreSocket, user} = options
     this.ws = null
     this.myHostname = 'localhost'
     this.options = options
-    this.user = options.user
+    this.user = user
 
     this.getHostName()
+
+    if (exploreSocket) {
+      exploreSocket(this)
+    }
   }
 
   getHostName() {
-    var myHostname = window.location.hostname
-
-    if (myHostname) {
-      this.myHostname = myHostname
-    }
-
+    this.myHostname = utilGetHostName()
     log('Hostname: ' + this.myHostname)
   }
 
@@ -71,7 +72,7 @@ const Socket = class {
     var time = new Date(msg.date)
     var timeStr = time.toLocaleTimeString()
 
-    const { handleUserListMsg } = this.options
+    const { handleUserListMsg, invite, handleNewICECandidateMsg, handleVideoOfferMsg, handleVideoAnswerMsg } = this.options
 
     switch (msg.type) {
       case 'id':
@@ -100,21 +101,20 @@ const Socket = class {
         // Signaling messages: these messages are used to trade WebRTC
         // signaling information during negotiations leading up to a video
         // call.
-
       case 'invite':
-        // invite(msg.name)
+        invite(msg)
         break
 
       case 'video-offer': // Invitation and offer to chat
-        // handleVideoOfferMsg(msg)
+        handleVideoOfferMsg(msg)
         break
 
       case 'video-answer': // Callee has answered our offer
-        // handleVideoAnswerMsg(msg);
+        handleVideoAnswerMsg(msg)
         break
 
       case 'new-ice-candidate': // A new ICE candidate has been received
-        // handleNewICECandidateMsg(msg)
+        handleNewICECandidateMsg(msg)
         break
 
       case 'hang-up': // The other peer has hung up the call
@@ -122,7 +122,6 @@ const Socket = class {
         break
 
         // Unknown message; output to console for debugging.
-
       default:
         logError('Unknown message received:')
         logError(msg)

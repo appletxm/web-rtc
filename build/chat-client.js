@@ -2982,7 +2982,7 @@
 
 	var forEach$2 = forEach_1;
 
-	var mediaConstraints = {
+	var MEDIA_CONSTRAINTS = {
 	  audio: true,
 	  // We want an audio track
 	  video: {
@@ -3003,6 +3003,11 @@
 	var logError = function logError(text) {
 	  var time = new Date();
 	  console.trace('[' + time.toLocaleTimeString() + '] ' + text);
+	};
+	var reportError = function reportError(errMessage) {
+	  var _context;
+
+	  logError(concat$2(_context = "Error ".concat(errMessage.name, ": ")).call(_context, errMessage.message));
 	};
 	var handleGetUserMediaError = function handleGetUserMediaError(e, cb) {
 	  logError(e);
@@ -3028,33 +3033,34 @@
 	  }
 	};
 
-	var closeVideoCall = function closeVideoCall(user) {
-	  var myPeerConnection = user.myPeerConnection,
-	      clientId = user.clientId;
-	  var localVideo = document.getElementById('video-' + clientId);
+	var closeVideoCall = function closeVideoCall(user, targetUserInfo) {
+	  var myPeerConnection = user.myPeerConnection;
+	  var targetUserId = targetUserInfo.clientId;
+	  var pCon = myPeerConnection[targetUserId];
+	  var localVideo = document.getElementById('video-' + targetUserId);
 	  log('Closing the call'); // Close the RTCPeerConnection
 
-	  if (myPeerConnection) {
+	  if (pCon) {
 	    var _context;
 
 	    log('--> Closing the peer connection'); // Disconnect all our event listeners; we don't want stray events
 	    // to interfere with the hangup while it's ongoing.
 
-	    myPeerConnection.ontrack = null;
-	    myPeerConnection.onnicecandidate = null;
-	    myPeerConnection.oniceconnectionstatechange = null;
-	    myPeerConnection.onsignalingstatechange = null;
-	    myPeerConnection.onicegatheringstatechange = null;
-	    myPeerConnection.onnotificationneeded = null; // Stop all transceivers on the connection
+	    pCon.ontrack = null;
+	    pCon.onnicecandidate = null;
+	    pCon.oniceconnectionstatechange = null;
+	    pCon.onsignalingstatechange = null;
+	    pCon.onicegatheringstatechange = null;
+	    pCon.onnotificationneeded = null; // Stop all transceivers on the connection
 
-	    forEach$2(_context = myPeerConnection.getTransceivers()).call(_context, function (transceiver) {
+	    forEach$2(_context = pCon.getTransceivers()).call(_context, function (transceiver) {
 	      transceiver.stop();
 	    }); // Stop the webcam preview as well by pausing the <video>
 	    // element, then stopping each of the getUserMedia() tracks
 	    // on it.
 
 
-	    if (localVideo.srcObject) {
+	    if (localVideo && localVideo.srcObject) {
 	      var _context2;
 
 	      localVideo.pause();
@@ -3065,14 +3071,18 @@
 	    } // Close the peer connection
 
 
-	    myPeerConnection.close();
-	    user.myPeerConnection = {};
-	    user.webcamStream = null;
-	  } // Disable the hangup button
-	  // document.getElementById('hangup-button').disabled = true;
+	    pCon.close(); // user.myPeerConnection = {}
+	    // user.webcamStream = null
+	  }
+
+	  if (user['targetUsers'][targetUserId]) {
+	    delete user['targetUsers'][targetUserId];
+	  } // user.targetUsers = {}
 
 
-	  user.targetUsername = null;
+	  if (user['offers'][targetUserId]) {
+	    delete user['offers'][targetUserId];
+	  }
 	};
 	var openLocalVideo = /*#__PURE__*/function () {
 	  var _ref = asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee(user) {
@@ -3083,12 +3093,12 @@
 	          case 0:
 	            _context3.prev = 0;
 	            _context3.next = 3;
-	            return navigator.mediaDevices.getUserMedia(mediaConstraints);
+	            return navigator.mediaDevices.getUserMedia(MEDIA_CONSTRAINTS);
 
 	          case 3:
 	            webcamStream = _context3.sent;
-	            document.getElementById('video-' + user.clientId).srcObject = webcamStream;
 	            user.webcamStream = webcamStream;
+	            document.getElementById('video-' + user.clientId).srcObject = user.webcamStream;
 	            _context3.next = 11;
 	            break;
 
@@ -3117,19 +3127,19 @@
 	  var listElem = document.querySelector('.chat-user-list');
 	  var needOpenLocalVideo = false;
 
-	  forEach$2(_context4 = msg.users).call(_context4, function (username) {
-	    var userCellId = 'user-' + user.clientId;
-	    var videoCellId = 'video-' + user.clientId;
+	  forEach$2(_context4 = msg.users).call(_context4, function (userItem) {
+	    var userCellId = 'user-' + userItem.clientId;
+	    var videoCellId = 'video-' + userItem.clientId;
 
 	    if (!document.querySelector('#' + userCellId)) {
 	      var _context5;
 
-	      needOpenLocalVideo = username === user.myUsername;
+	      needOpenLocalVideo = userItem.clientId === user.clientId;
 	      var item = document.createElement('li');
 
 	      var videoStr = concat$2(_context5 = "<video id='".concat(videoCellId, "' autoplay ")).call(_context5, needOpenLocalVideo ? 'muted' : '', "></video>");
 
-	      var nameText = "<b>".concat(username, "</b>");
+	      var nameText = "<b>".concat(userItem.username, "</b>");
 	      item.setAttribute('id', userCellId);
 	      item.innerHTML = videoStr + nameText;
 	      listElem.appendChild(item);
@@ -3141,51 +3151,52 @@
 	  }
 	};
 
-	var User = /*#__PURE__*/function () {
-	  function User() {
-	    classCallCheck(this, User);
+	var slice = [].slice;
+	var factories = {};
 
-	    this.clientId = 0;
-	    this.myUsername = '';
-	    this.connections = {};
-	    this.targetUsername = {};
-	    this.myPeerConnection = {};
-	    this.webcamStream = null;
-	  }
+	var construct = function (C, argsLength, args) {
+	  if (!(argsLength in factories)) {
+	    for (var list = [], i = 0; i < argsLength; i++) list[i] = 'a[' + i + ']';
+	    // eslint-disable-next-line no-new-func -- we have no proper alternatives, IE8- only
+	    factories[argsLength] = Function('C,a', 'return new C(' + list.join(',') + ')');
+	  } return factories[argsLength](C, args);
+	};
 
-	  createClass(User, [{
-	    key: "setUserId",
-	    value: function setUserId(id) {
-	      this.clientId = id;
-	    }
-	  }, {
-	    key: "setUserName",
-	    value: function setUserName(name) {
-	      this.myUsername = name;
-	    }
-	  }, {
-	    key: "createUserList",
-	    value: function createUserList(msg) {
-	      createVideoList(msg, this);
-	    }
-	  }]);
+	// `Function.prototype.bind` method implementation
+	// https://tc39.es/ecma262/#sec-function.prototype.bind
+	var functionBind = Function.bind || function bind(that /* , ...args */) {
+	  var fn = aFunction(this);
+	  var partArgs = slice.call(arguments, 1);
+	  var boundFunction = function bound(/* args... */) {
+	    var args = partArgs.concat(slice.call(arguments));
+	    return this instanceof boundFunction ? construct(fn, args.length, args) : fn.apply(that, args);
+	  };
+	  if (isObject(fn.prototype)) boundFunction.prototype = fn.prototype;
+	  return boundFunction;
+	};
 
-	  return User;
-	}();
-
-	// `Date.now` method
-	// https://tc39.es/ecma262/#sec-date.now
-	_export({ target: 'Date', stat: true }, {
-	  now: function now() {
-	    return new Date().getTime();
-	  }
+	// `Function.prototype.bind` method
+	// https://tc39.es/ecma262/#sec-function.prototype.bind
+	_export({ target: 'Function', proto: true }, {
+	  bind: functionBind
 	});
 
-	var now = path.Date.now;
+	var bind$1 = entryVirtual('Function').bind;
 
-	var now$1 = now;
+	var FunctionPrototype = Function.prototype;
 
-	var now$2 = now$1;
+	var bind_1 = function (it) {
+	  var own = it.bind;
+	  return it === FunctionPrototype || (it instanceof Function && own === FunctionPrototype.bind) ? bind$1 : own;
+	};
+
+	var bind$2 = bind_1;
+
+	var bind$3 = bind$2;
+
+	var promise$4 = promise$1;
+
+	var promise$5 = promise$4;
 
 	var $stringify = getBuiltIn('JSON', 'stringify');
 	var re = /[\uD800-\uDFFF]/g;
@@ -3229,26 +3240,578 @@
 
 	var stringify$2 = stringify$1;
 
+	var getHostName = function getHostName() {
+	  var myHostname = window.location.hostname;
+
+	  if (!myHostname) {
+	    myHostname = 'localhost';
+	  }
+
+	  return myHostname;
+	};
+
+	var Connection = /*#__PURE__*/function () {
+	  function Connection(options) {
+	    classCallCheck(this, Connection);
+
+	    var user = options.user,
+	        targetUserInfo = options.targetUserInfo;
+	    this.connect = null;
+	    this.targetUserInfo = targetUserInfo;
+	    this.user = user;
+	    this.transceiver = null;
+	    this.createConnect();
+	  }
+
+	  createClass(Connection, [{
+	    key: "handleICECandidateEvent",
+	    value: function handleICECandidateEvent(event) {
+	      if (event.candidate) {
+	        log('*** Outgoing ICE candidate: ' + event.candidate.candidate);
+	        var _this$targetUserInfo = this.targetUserInfo,
+	            clientId = _this$targetUserInfo.clientId,
+	            username = _this$targetUserInfo.username;
+	        var socket = this.user.socket;
+	        socket.sendToServer({
+	          type: 'new-ice-candidate',
+	          id: clientId,
+	          target: username,
+	          candidate: event.candidate
+	        });
+	      }
+	    }
+	  }, {
+	    key: "handleICEConnectionStateChangeEvent",
+	    value: function handleICEConnectionStateChangeEvent(event) {
+	      log('*** ICE connection state changed to ' + this.connect.iceConnectionState);
+
+	      switch (this.connect.iceConnectionState) {
+	        case 'closed':
+	        case 'failed':
+	        case 'disconnected':
+	          closeVideoCall(this.user, this.targetUserInfo);
+	          break;
+	      }
+	    }
+	  }, {
+	    key: "handleICEGatheringStateChangeEvent",
+	    value: function handleICEGatheringStateChangeEvent(event) {
+	      log('*** ICE gathering state: ' + this.connect.iceGatheringState);
+	      log('*** ICE gathering event:');
+	    }
+	  }, {
+	    key: "handleSignalingStateChangeEvent",
+	    value: function handleSignalingStateChangeEvent(event) {
+	      log('*** WebRTC signaling state : ' + this.connect.signalingState);
+	      log('*** WebRTC signaling event : ');
+
+	      switch (this.connect.signalingState) {
+	        case 'closed':
+	          closeVideoCall(this.user, this.targetUserInfo);
+	          break;
+	      }
+	    }
+	  }, {
+	    key: "handleNegotiationNeededEvent",
+	    value: function () {
+	      var _handleNegotiationNeededEvent = asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee() {
+	        var offer, username, _this$user, socket, myUsername, clientId;
+
+	        return regenerator.wrap(function _callee$(_context) {
+	          while (1) {
+	            switch (_context.prev = _context.next) {
+	              case 0:
+	                log('*** Negotiation needed');
+	                _context.prev = 1;
+	                log('---> Creating offer');
+	                _context.next = 5;
+	                return this.connect.createOffer();
+
+	              case 5:
+	                offer = _context.sent;
+
+	                if (!(this.connect.signalingState !== 'stable')) {
+	                  _context.next = 9;
+	                  break;
+	                }
+
+	                log('    -- The connection isn\'t stable yet; postponing...');
+	                return _context.abrupt("return");
+
+	              case 9:
+	                // Establish the offer as the local peer's current
+	                // description.
+	                log('---> Setting local description to the offer');
+	                _context.next = 12;
+	                return this.connect.setLocalDescription(offer);
+
+	              case 12:
+	                // Send the offer to the remote peer.
+	                log('---> Sending the offer to the remote peer');
+	                username = this.targetUserInfo.username;
+	                _this$user = this.user, socket = _this$user.socket, myUsername = _this$user.myUsername, clientId = _this$user.clientId;
+	                socket.sendToServer({
+	                  id: clientId,
+	                  targetId: this.targetUserInfo.clientId,
+	                  name: myUsername,
+	                  targetUsername: username,
+	                  type: 'video-offer',
+	                  sdp: this.connect.localDescription
+	                });
+	                _context.next = 22;
+	                break;
+
+	              case 18:
+	                _context.prev = 18;
+	                _context.t0 = _context["catch"](1);
+	                log('*** The following error occurred while handling the negotiationneeded event:');
+	                reportError(_context.t0);
+
+	              case 22:
+	              case "end":
+	                return _context.stop();
+	            }
+	          }
+	        }, _callee, this, [[1, 18]]);
+	      }));
+
+	      function handleNegotiationNeededEvent() {
+	        return _handleNegotiationNeededEvent.apply(this, arguments);
+	      }
+
+	      return handleNegotiationNeededEvent;
+	    }()
+	  }, {
+	    key: "handleTrackEvent",
+	    value: function handleTrackEvent(event) {
+	      log('=============*** Track event:', this.user.myUsername, ':', 'video-' + this.targetUserInfo.username);
+	      document.getElementById('video-' + this.targetUserInfo.clientId).srcObject = event.streams[0];
+	    }
+	  }, {
+	    key: "handleNewICECandidateMsg",
+	    value: function () {
+	      var _handleNewICECandidateMsg = asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee2(msg) {
+	        var candidate;
+	        return regenerator.wrap(function _callee2$(_context2) {
+	          while (1) {
+	            switch (_context2.prev = _context2.next) {
+	              case 0:
+	                candidate = new RTCIceCandidate(msg.candidate);
+	                log('*** Adding received ICE candidate: ' + stringify$2(candidate));
+	                _context2.prev = 2;
+	                _context2.next = 5;
+	                return this.connect.addIceCandidate(candidate);
+
+	              case 5:
+	                _context2.next = 10;
+	                break;
+
+	              case 7:
+	                _context2.prev = 7;
+	                _context2.t0 = _context2["catch"](2);
+	                reportError(_context2.t0);
+
+	              case 10:
+	              case "end":
+	                return _context2.stop();
+	            }
+	          }
+	        }, _callee2, this, [[2, 7]]);
+	      }));
+
+	      function handleNewICECandidateMsg(_x) {
+	        return _handleNewICECandidateMsg.apply(this, arguments);
+	      }
+
+	      return handleNewICECandidateMsg;
+	    }()
+	  }, {
+	    key: "handleVideoOfferMsg",
+	    value: function () {
+	      var _handleVideoOfferMsg = asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee3(msg) {
+	        var targetId, targetUsername, desc, _this$user2, socket, myUsername, clientId;
+
+	        return regenerator.wrap(function _callee3$(_context3) {
+	          while (1) {
+	            switch (_context3.prev = _context3.next) {
+	              case 0:
+	                // msg content belows
+	                // id: clientId,
+	                // targetId: this.targetUserInfo.clientId,
+	                // name: myUsername,
+	                // target: username,
+	                // type: 'video-offer',
+	                // sdp: this.connect.localDescription
+	                targetId = msg.targetId, targetUsername = msg.targetUsername; // If we're not already connected, create an RTCPeerConnection
+	                // to be linked to the caller.
+
+	                log('Received video chat offer from ' + targetUsername);
+
+	                if (!this.connect) {
+	                  this.targetUserInfo = {
+	                    clientId: targetId,
+	                    username: targetUsername
+	                  };
+	                  this.createPeerConnection();
+	                  this['user']['myPeerConnection'][targetId] = this;
+	                  this['user']['targetUsers'][targetId] = {
+	                    clientId: targetId,
+	                    username: targetUsername
+	                  };
+	                } // We need to set the remote description to the received SDP offer
+	                // so that our local WebRTC layer knows how to talk to the caller.
+
+
+	                desc = new RTCSessionDescription(msg.sdp); // If the connection isn't stable yet, wait for it...
+
+	                if (!(this.connect.signalingState !== 'stable')) {
+	                  _context3.next = 11;
+	                  break;
+	                }
+
+	                log('  - But the signaling state isn\'t stable, so triggering rollback'); // Set the local and remove descriptions for rollback; don't proceed
+	                // until both return.
+
+	                _context3.next = 8;
+	                return promise$5.all([this.connect.setLocalDescription({
+	                  type: 'rollback'
+	                }), this.connect.setRemoteDescription(desc)]);
+
+	              case 8:
+	                return _context3.abrupt("return");
+
+	              case 11:
+	                log('  - Setting remote description');
+	                _context3.next = 14;
+	                return this.connect.setRemoteDescription(desc);
+
+	              case 14:
+	                // Get the webcam stream if we don't already have it
+	                console.info('***8888****', this.user.clientId, this.user.webcamStream);
+
+	                if (this.user.webcamStream) {
+	                  _context3.next = 27;
+	                  break;
+	                }
+
+	                _context3.prev = 16;
+	                _context3.next = 19;
+	                return navigator.mediaDevices.getUserMedia(MEDIA_CONSTRAINTS);
+
+	              case 19:
+	                this.usr.webcamStream = _context3.sent;
+	                _context3.next = 26;
+	                break;
+
+	              case 22:
+	                _context3.prev = 22;
+	                _context3.t0 = _context3["catch"](16);
+	                handleGetUserMediaError(_context3.t0);
+	                return _context3.abrupt("return");
+
+	              case 26:
+	                document.getElementById('video-' + this.user.clientId).srcObject = this.user.webcamStream; // this.setTrackStream()
+
+	              case 27:
+	                log('---> Creating and sending answer to caller');
+	                _context3.t1 = this.connect;
+	                _context3.next = 31;
+	                return this.connect.createAnswer();
+
+	              case 31:
+	                _context3.t2 = _context3.sent;
+	                _context3.next = 34;
+	                return _context3.t1.setLocalDescription.call(_context3.t1, _context3.t2);
+
+	              case 34:
+	                _this$user2 = this.user, socket = _this$user2.socket, myUsername = _this$user2.myUsername, clientId = _this$user2.clientId;
+	                socket.sendToServer({
+	                  id: clientId,
+	                  name: myUsername,
+	                  targetId: targetId,
+	                  targetUsername: targetUsername,
+	                  type: 'video-answer',
+	                  sdp: this.connect.localDescription
+	                });
+
+	              case 36:
+	              case "end":
+	                return _context3.stop();
+	            }
+	          }
+	        }, _callee3, this, [[16, 22]]);
+	      }));
+
+	      function handleVideoOfferMsg(_x2) {
+	        return _handleVideoOfferMsg.apply(this, arguments);
+	      }
+
+	      return handleVideoOfferMsg;
+	    }()
+	  }, {
+	    key: "handleVideoAnswerMsg",
+	    value: function () {
+	      var _handleVideoAnswerMsg = asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee4(msg) {
+	        var desc;
+	        return regenerator.wrap(function _callee4$(_context4) {
+	          while (1) {
+	            switch (_context4.prev = _context4.next) {
+	              case 0:
+	                log('*** Call recipient has accepted our call'); // Configure the remote description, which is the SDP payload
+	                // in our 'video-answer' message.
+
+	                desc = new RTCSessionDescription(msg.sdp);
+	                _context4.next = 4;
+	                return this.connect.setRemoteDescription(desc)["catch"](reportError);
+
+	              case 4:
+	              case "end":
+	                return _context4.stop();
+	            }
+	          }
+	        }, _callee4, this);
+	      }));
+
+	      function handleVideoAnswerMsg(_x3) {
+	        return _handleVideoAnswerMsg.apply(this, arguments);
+	      }
+
+	      return handleVideoAnswerMsg;
+	    }()
+	  }, {
+	    key: "createPeerConnection",
+	    value: function () {
+	      var _createPeerConnection = asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee5() {
+	        var _context5, _context6, _context7, _context8, _context9, _context10;
+
+	        return regenerator.wrap(function _callee5$(_context11) {
+	          while (1) {
+	            switch (_context11.prev = _context11.next) {
+	              case 0:
+	                log('Setting up a connection...'); // Create an RTCPeerConnection which knows to use our chosen
+	                // STUN server.
+
+	                this.connect = new RTCPeerConnection({
+	                  iceServers: [// Information about ICE servers - Use your own!
+	                  {
+	                    urls: 'turn:' + getHostName(),
+	                    // A TURN server
+	                    username: 'webrtc',
+	                    credential: 'turnserver'
+	                  }]
+	                }); // Set up event handlers for the ICE negotiation process.
+
+	                this.connect.onicecandidate = bind$3(_context5 = this.handleICECandidateEvent).call(_context5, this);
+	                this.connect.oniceconnectionstatechange = bind$3(_context6 = this.handleICEConnectionStateChangeEvent).call(_context6, this);
+	                this.connect.onicegatheringstatechange = bind$3(_context7 = this.handleICEGatheringStateChangeEvent).call(_context7, this);
+	                this.connect.onsignalingstatechange = bind$3(_context8 = this.handleSignalingStateChangeEvent).call(_context8, this);
+	                this.connect.onnegotiationneeded = bind$3(_context9 = this.handleNegotiationNeededEvent).call(_context9, this);
+	                this.connect.ontrack = bind$3(_context10 = this.handleTrackEvent).call(_context10, this);
+
+	              case 8:
+	              case "end":
+	                return _context11.stop();
+	            }
+	          }
+	        }, _callee5, this);
+	      }));
+
+	      function createPeerConnection() {
+	        return _createPeerConnection.apply(this, arguments);
+	      }
+
+	      return createPeerConnection;
+	    }()
+	  }, {
+	    key: "setTrackStream",
+	    value: function setTrackStream() {
+	      var _this = this;
+
+	      try {
+	        var _context12;
+
+	        forEach$2(_context12 = this.user.webcamStream.getTracks()).call(_context12, // this.transceiver = track => this.connect.addTransceiver(track, {streams: [this.user.webcamStream]})
+	        function (track) {
+	          return _this.connect.addTransceiver(track, {
+	            streams: [_this.user.webcamStream]
+	          });
+	        });
+	      } catch (err) {
+	        handleGetUserMediaError(err, function () {
+	          closeVideoCall(_this.user, _this.targetUserInfo);
+	        });
+	      }
+	    }
+	  }, {
+	    key: "createConnect",
+	    value: function createConnect() {
+	      var username = this.targetUserInfo.username;
+	      log('Inviting user ' + username);
+	      log('Setting up connection to invite user: ' + username);
+	      this.createPeerConnection(); // setTimeout(() => {
+
+	      this.setTrackStream(); // }, 1000)
+	    }
+	  }]);
+
+	  return Connection;
+	}();
+
+	var User = /*#__PURE__*/function () {
+	  function User() {
+	    classCallCheck(this, User);
+
+	    this.clientId = 0;
+	    this.myUsername = '';
+	    this.connections = {};
+	    this.targetUsers = {};
+	    this.offers = {};
+	    this.myPeerConnection = {};
+	    this.webcamStream = null;
+	    this.socket = null;
+	  }
+
+	  createClass(User, [{
+	    key: "setUserId",
+	    value: function setUserId(id) {
+	      this.clientId = id;
+	    }
+	  }, {
+	    key: "setUserName",
+	    value: function setUserName(name) {
+	      this.myUsername = name;
+	    }
+	  }, {
+	    key: "createUserList",
+	    value: function createUserList(msg) {
+	      createVideoList(msg, this);
+	    }
+	  }, {
+	    key: "createPeerConnection",
+	    value: function createPeerConnection(targetUserInfo) {
+	      var clientId = targetUserInfo.clientId;
+	      this.myPeerConnection[clientId] = new Connection({
+	        user: this,
+	        targetUserInfo: targetUserInfo
+	      });
+	      this.targetUsers[clientId] = targetUserInfo;
+	    }
+	  }, {
+	    key: "invite",
+	    value: function invite(msg) {
+	      var id = msg.id,
+	          name = msg.name;
+
+	      if (id === this.clientId) {
+	        return false;
+	      }
+
+	      if (!this.myPeerConnection[id]) {
+	        var targetUserInfo = {
+	          clientId: id,
+	          username: name
+	        };
+	        this.createPeerConnection(targetUserInfo);
+	      }
+	    }
+	  }, {
+	    key: "handleNewICECandidateMsg",
+	    value: function handleNewICECandidateMsg(msg) {
+	      var id = msg.id;
+	      var peerCon = this['myPeerConnection'][id];
+
+	      if (peerCon) {
+	        peerCon.handleNewICECandidateMsg(msg);
+	      }
+	    }
+	  }, {
+	    key: "handleVideoOfferMsg",
+	    value: function handleVideoOfferMsg(msg) {
+	      var id = msg.id,
+	          name = msg.name;
+
+	      if (id === this.clientId) {
+	        return false;
+	      }
+
+	      var peerCon = this['myPeerConnection'][id];
+	      debugger;
+
+	      if (peerCon) {
+	        peerCon.handleVideoOfferMsg(msg);
+	      } else {
+	        this.createPeerConnection({
+	          clientId: id,
+	          username: name
+	        });
+	        this['offers'][id] = true;
+	        peerCon = this['myPeerConnection'][id];
+	        peerCon.handleVideoOfferMsg(msg);
+	      }
+	    }
+	  }, {
+	    key: "handleVideoAnswerMsg",
+	    value: function handleVideoAnswerMsg(msg) {
+	      var id = msg.id,
+	          name = msg.name;
+
+	      if (id === this.clientId) {
+	        return false;
+	      }
+
+	      var peerCon = this['myPeerConnection'][id];
+	      var offer = this['offers'][id];
+	      debugger;
+
+	      if (peerCon && offer) {
+	        peerCon.handleVideoAnswerMsg(msg);
+	      } else {
+	        this.createPeerConnection({
+	          clientId: id,
+	          username: name
+	        });
+	      }
+	    }
+	  }]);
+
+	  return User;
+	}();
+
+	// `Date.now` method
+	// https://tc39.es/ecma262/#sec-date.now
+	_export({ target: 'Date', stat: true }, {
+	  now: function now() {
+	    return new Date().getTime();
+	  }
+	});
+
+	var now = path.Date.now;
+
+	var now$1 = now;
+
+	var now$2 = now$1;
+
 	var Socket = /*#__PURE__*/function () {
 	  function Socket(options) {
 	    classCallCheck(this, Socket);
 
+	    var exploreSocket = options.exploreSocket,
+	        user = options.user;
 	    this.ws = null;
 	    this.myHostname = 'localhost';
 	    this.options = options;
-	    this.user = options.user;
+	    this.user = user;
 	    this.getHostName();
+
+	    if (exploreSocket) {
+	      exploreSocket(this);
+	    }
 	  }
 
 	  createClass(Socket, [{
 	    key: "getHostName",
-	    value: function getHostName() {
-	      var myHostname = window.location.hostname;
-
-	      if (myHostname) {
-	        this.myHostname = myHostname;
-	      }
-
+	    value: function getHostName$1() {
+	      this.myHostname = getHostName();
 	      log('Hostname: ' + this.myHostname);
 	    }
 	  }, {
@@ -3307,7 +3870,12 @@
 	      var msg = JSON.parse(evt.data);
 	      var time = new Date(msg.date);
 	      var timeStr = time.toLocaleTimeString();
-	      var handleUserListMsg = this.options.handleUserListMsg;
+	      var _this$options = this.options,
+	          handleUserListMsg = _this$options.handleUserListMsg,
+	          invite = _this$options.invite,
+	          handleNewICECandidateMsg = _this$options.handleNewICECandidateMsg,
+	          handleVideoOfferMsg = _this$options.handleVideoOfferMsg,
+	          handleVideoAnswerMsg = _this$options.handleVideoAnswerMsg;
 
 	      switch (msg.type) {
 	        case 'id':
@@ -3337,22 +3905,22 @@
 	        // call.
 
 	        case 'invite':
-	          // invite(msg.name)
+	          invite(msg);
 	          break;
 
 	        case 'video-offer':
 	          // Invitation and offer to chat
-	          // handleVideoOfferMsg(msg)
+	          handleVideoOfferMsg(msg);
 	          break;
 
 	        case 'video-answer':
 	          // Callee has answered our offer
-	          // handleVideoAnswerMsg(msg);
+	          handleVideoAnswerMsg(msg);
 	          break;
 
 	        case 'new-ice-candidate':
 	          // A new ICE candidate has been received
-	          // handleNewICECandidateMsg(msg)
+	          handleNewICECandidateMsg(msg);
 	          break;
 
 	        case 'hang-up':
@@ -3405,8 +3973,23 @@
 	  var user = new User();
 	  var socket = new Socket({
 	    user: user,
+	    exploreSocket: function exploreSocket(socket) {
+	      user.socket = socket;
+	    },
 	    handleUserListMsg: function handleUserListMsg(msg) {
 	      user.createUserList(msg);
+	    },
+	    invite: function invite(msg) {
+	      user.invite(msg);
+	    },
+	    handleNewICECandidateMsg: function handleNewICECandidateMsg(msg) {
+	      user.handleNewICECandidateMsg(msg);
+	    },
+	    handleVideoOfferMsg: function handleVideoOfferMsg(msg) {
+	      user.handleVideoOfferMsg(msg);
+	    },
+	    handleVideoAnswerMsg: function handleVideoAnswerMsg(msg) {
+	      user.handleVideoAnswerMsg(msg);
 	    }
 	  });
 	  addEvents({
