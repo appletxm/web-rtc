@@ -88,9 +88,12 @@ export const Connection = class {
       const {socket, myUsername, clientId} = this.user
       const targetId = this.targetUserInfo.clientId
 
-      // debugger
+      debugger
 
-      if (clientId !== targetId && this['user']['myPeerConnection'][targetId]) {
+      console.info('**offer**', 'clientId: ', clientId, ' targetId: ', targetId, this['user']['offers'])
+
+      // if (clientId !== targetId && this['user']['myPeerConnection'][targetId]) {
+      if (clientId !== targetId && !this['user']['offers']['targetId']) {
         socket.sendToServer({
           id: clientId,
           targetId,
@@ -131,7 +134,7 @@ export const Connection = class {
     // type: 'video-offer',
     // sdp: this.connect.localDescription
 
-    const { targetId, targetUsername } = msg
+    const { targetId, targetUsername, id, name } = msg
 
     // If we're not already connected, create an RTCPeerConnection
     // to be linked to the caller.
@@ -184,13 +187,15 @@ export const Connection = class {
 
     const {socket, myUsername, clientId} = this.user
 
-    // debugger
+    console.info('**answer**', this['user']['myPeerConnection'], 'msg id:', id, ' this.user.clientId:', this.user.clientId, ' msg targetId: ', targetId)
+
+    debugger
 
     socket.sendToServer({
       id: clientId,
       name: myUsername,
-      targetId,
-      targetUsername,
+      targetId: id,
+      targetUsername: name,
       type: 'video-answer',
       sdp: this.connect.localDescription
     })
