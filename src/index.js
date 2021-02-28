@@ -4,11 +4,20 @@ import 'regenerator-runtime/runtime'
 import User from './user'
 import Socket from './socket'
 import { addEvents as loginEvent } from './login'
+import Chat from './chat'
 
 function bootStrap() {
   const user = new User()
+  const chat = new Chat(
+    {
+      user
+    }
+  )
   const socket = new Socket({
     user,
+    setSocket(socket) {
+      chat.socket = socket
+    },
     exploreSocket(socket) {
       user.socket = socket
     },
@@ -26,6 +35,9 @@ function bootStrap() {
     },
     handleVideoAnswerMsg(msg) {
       user.handleVideoAnswerMsg(msg)
+    },
+    handleChatMessage(msg) {
+      chat.showMessage(msg)
     }
   })
 

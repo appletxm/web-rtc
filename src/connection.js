@@ -88,12 +88,10 @@ export const Connection = class {
       const {socket, myUsername, clientId} = this.user
       const targetId = this.targetUserInfo.clientId
 
-      debugger
-
       console.info('**offer**', 'clientId: ', clientId, ' targetId: ', targetId, this['user']['offers'])
 
       // if (clientId !== targetId && this['user']['myPeerConnection'][targetId]) {
-      if (clientId !== targetId && !this['user']['offers']['targetId']) {
+      if (clientId !== targetId) {
         socket.sendToServer({
           id: clientId,
           targetId,
@@ -110,7 +108,7 @@ export const Connection = class {
   }
 
   handleTrackEvent(event) {
-    log('=============*** Track event:', this.user.myUsername, ':', ('video-' + this.targetUserInfo.username))
+    log('*** Track event:', this.user.myUsername, ':', ('video-' + this.targetUserInfo.username))
     document.getElementById('video-' + this.targetUserInfo.clientId).srcObject = event.streams[0]
   }
 
@@ -187,18 +185,19 @@ export const Connection = class {
 
     const {socket, myUsername, clientId} = this.user
 
-    console.info('**answer**', this['user']['myPeerConnection'], 'msg id:', id, ' this.user.clientId:', this.user.clientId, ' msg targetId: ', targetId)
+    // console.info('**answer**', this['user']['myPeerConnection'], 'msg id:', id, ' this.user.clientId:', this.user.clientId, ' msg targetId: ', targetId)
 
-    debugger
-
-    socket.sendToServer({
-      id: clientId,
-      name: myUsername,
-      targetId: id,
-      targetUsername: name,
-      type: 'video-answer',
-      sdp: this.connect.localDescription
-    })
+    if (clientId !== id && (clientId === id || clientId === targetId)) {
+    // if (this['user']['offers'][targetId]) {
+      socket.sendToServer({
+        id: clientId,
+        name: myUsername,
+        targetId: id,
+        targetUsername: name,
+        type: 'video-answer',
+        sdp: this.connect.localDescription
+      })
+    }
   }
 
   async handleVideoAnswerMsg(msg) {
@@ -262,8 +261,7 @@ export const Connection = class {
 
   createConnect() {
     const { username } = this.targetUserInfo
-    log('Inviting user ' + username)
-    log('Setting up connection to invite user: ' + username)
+    log(`======Create connection from ${this.user.myUsername} to ${username}`)
 
     this.createPeerConnection()
     this.setTrackStream()

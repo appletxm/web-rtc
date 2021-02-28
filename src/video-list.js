@@ -25,9 +25,11 @@ export const closeVideoCall = function(user, targetUserInfo) {
 
     // Stop all transceivers on the connection
 
-    pCon.getTransceivers().forEach(transceiver => {
-      transceiver.stop()
-    })
+    if (pCon && pCon.getTransceivers) {
+      pCon.getTransceivers().forEach(transceiver => {
+        transceiver.stop()
+      })
+    }
 
     // Stop the webcam preview as well by pausing the <video>
     // element, then stopping each of the getUserMedia() tracks
@@ -53,6 +55,10 @@ export const closeVideoCall = function(user, targetUserInfo) {
   // user.targetUsers = {}
 
   if (user['offers'][targetUserId]) {
+    delete user['offers'][targetUserId]
+  }
+
+  if (user['answers'][targetUserId]) {
     delete user['offers'][targetUserId]
   }
 }

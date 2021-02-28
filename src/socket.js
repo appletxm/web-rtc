@@ -5,7 +5,7 @@ import { getHostName as utilGetHostName } from './utils'
 
 const Socket = class {
   constructor(options) {
-    const {exploreSocket, user} = options
+    const {exploreSocket, user, setSocket} = options
     this.ws = null
     this.myHostname = 'localhost'
     this.options = options
@@ -15,6 +15,10 @@ const Socket = class {
 
     if (exploreSocket) {
       exploreSocket(this)
+    }
+
+    if (setSocket && typeof setSocket === 'function') {
+      setSocket(this)
     }
   }
 
@@ -69,7 +73,6 @@ const Socket = class {
   }
 
   handleConnectMessage(evt) {
-    var chatBox = document.querySelector('.chat-content')
     var text = ''
     var msg = JSON.parse(evt.data)
     var time = new Date(msg.date)
@@ -77,7 +80,7 @@ const Socket = class {
 
     // console.info('-===handleConnectMessage===', msg)
 
-    const { handleUserListMsg, invite, handleNewICECandidateMsg, handleVideoOfferMsg, handleVideoAnswerMsg } = this.options
+    const { handleUserListMsg, invite, handleNewICECandidateMsg, handleVideoOfferMsg, handleVideoAnswerMsg, handleChatMessage } = this.options
 
     switch (msg.type) {
       case 'id':
@@ -134,11 +137,7 @@ const Socket = class {
 
     // If there's text to insert into the chat buffer, do so now, then
     // scroll the chat panel so that the new text is visible.
-
-    if (text.length) {
-      chatBox.innerHTML += text
-      chatBox.scrollTop = chatBox.scrollHeight - chatBox.clientHeight
-    }
+    handleChatMessage(text)
   }
 }
 

@@ -8,6 +8,7 @@ const User = class {
     this.connections = {}
     this.targetUsers = {}
     this.offers = {}
+    this.answers = {}
     this.myPeerConnection = {}
     this.webcamStream = null
     this.socket = null
@@ -60,13 +61,13 @@ const User = class {
   }
 
   handleVideoOfferMsg(msg) {
-    const { id, name } = msg
-
-    if (id === this.clientId) {
-      return false
-    }
+    const { id, targetId, name } = msg
 
     let peerCon = this['myPeerConnection'][id]
+
+    if ((id === this.clientId) || (id !== this.clientId && targetId !== this.clientId)) {
+      return false
+    }
 
     if (peerCon) {
       peerCon.handleVideoOfferMsg(msg)
@@ -82,14 +83,15 @@ const User = class {
   }
 
   handleVideoAnswerMsg(msg) {
-    const { id } = msg
+    const { id, targetId } = msg
 
-    if (id === this.clientId) {
+    const peerCon = this['myPeerConnection'][id]
+
+    if (id === this.clientId || (id !== this.clientId && targetId !== this.clientId)) {
       return false
     }
 
-    const peerCon = this['myPeerConnection'][id]
-    // let offer = this['offers'][id]
+    this['answers'][id] = true
 
     if (peerCon) {
       peerCon.handleVideoAnswerMsg(msg)
