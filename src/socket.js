@@ -5,7 +5,7 @@ import { getHostName as utilGetHostName } from './utils'
 
 const Socket = class {
   constructor(options) {
-    const {exploreSocket, user, setSocket} = options
+    const {exploreSocket, user} = options
     this.ws = null
     this.myHostname = 'localhost'
     this.options = options
@@ -13,12 +13,8 @@ const Socket = class {
 
     this.getHostName()
 
-    if (exploreSocket) {
+    if (exploreSocket && typeof exploreSocket === 'function') {
       exploreSocket(this)
-    }
-
-    if (setSocket && typeof setSocket === 'function') {
-      setSocket(this)
     }
   }
 
@@ -80,7 +76,7 @@ const Socket = class {
 
     // console.info('-===handleConnectMessage===', msg)
 
-    const { handleUserListMsg, invite, handleNewICECandidateMsg, handleVideoOfferMsg, handleVideoAnswerMsg, handleChatMessage } = this.options
+    const { handleUserListMsg, invite, handleNewICECandidateMsg, handleVideoOfferMsg, handleVideoAnswerMsg, handleChatMessage, handleHangUpMsg } = this.options
 
     switch (msg.type) {
       case 'id':
@@ -126,7 +122,7 @@ const Socket = class {
         break
 
       case 'hang-up': // The other peer has hung up the call
-        // handleHangUpMsg(msg)
+        handleHangUpMsg(msg)
         break
 
         // Unknown message; output to console for debugging.

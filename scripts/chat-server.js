@@ -144,6 +144,16 @@ function sendUserListToAll() {
   }
 }
 
+function reduceClient(msg) {
+  const { id, username } = msg
+  log(`user ${username} already off line. `)
+  const newConnect = connectionArray.filter(client => {
+    return client.clientId !== id
+  })
+
+  connectionArray = newConnect
+}
+
 
 // Try to load the key and certificate files for SSL so we can
 // do HTTPS (required for non-local WebRTC).
@@ -326,8 +336,11 @@ wsServer.on('request', function(request) {
               date: new Date().getTime()
             }))
           })
-
           break;
+
+          case 'hang-up':
+            reduceClient(msg)
+            break;
       }
 
       // Convert the revised message back to JSON and send it out
@@ -342,12 +355,15 @@ wsServer.on('request', function(request) {
 
         // If the message specifies a target username, only send the
         // message to them. Otherwise, send it to every user.
-        if (msg.target && msg.target !== undefined && msg.target.length !== 0) {
-          sendToOneUser(msg.target, msg.id, msgString);
-        } else {
-          for (i=0; i<connectionArray.length; i++) {
-            connectionArray[i].sendUTF(msgString);
-          }
+        // if (msg.targetId && msg.targetId !== undefined && msg.targetId.length !== 0) {
+        //   sendToOneUser(msg.target, msg.id, msgString);
+        // } else {
+        //   for (i=0; i<connectionArray.length; i++) {
+        //     connectionArray[i].sendUTF(msgString);
+        //   }
+        // }
+        for (i=0; i<connectionArray.length; i++) {
+          connectionArray[i].sendUTF(msgString);
         }
       }
     }

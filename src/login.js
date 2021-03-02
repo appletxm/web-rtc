@@ -1,12 +1,11 @@
 export const addEvents = function(options) {
   const userInput = document.querySelector('#name')
   const btnLogin = document.querySelector('#btn-login')
-
-  const {enterEvent, loginEvent} = options
+  const { login } = options
 
   userInput.addEventListener('keyup', function(evt) {
     if (evt.keyCode === 13 || evt.keyCode === 14) {
-      enterEvent({
+      login({
         userName: userInput.value,
         evt
       })
@@ -14,7 +13,7 @@ export const addEvents = function(options) {
   })
 
   btnLogin.addEventListener('click', function(evt) {
-    loginEvent({
+    login({
       userName: userInput.value,
       evt
     })

@@ -3065,7 +3065,13 @@
 	var closeVideoCall = function closeVideoCall(user, targetUserInfo) {
 	  var myPeerConnection = user.myPeerConnection;
 	  var targetUserId = targetUserInfo.clientId;
-	  var pCon = myPeerConnection[targetUserId];
+	  var pConInstance = myPeerConnection[targetUserId];
+
+	  if (!pConInstance) {
+	    return false;
+	  }
+
+	  var pCon = pConInstance.connect;
 	  var localVideo = document.getElementById('video-' + targetUserId);
 	  log('Closing the call'); // Close the RTCPeerConnection
 
@@ -3080,7 +3086,7 @@
 	    pCon.onicegatheringstatechange = null;
 	    pCon.onnotificationneeded = null; // Stop all transceivers on the connection
 
-	    if (pCon && pCon.getTransceivers) {
+	    if (pCon.getTransceivers) {
 	      var _context;
 
 	      forEach$2(_context = pCon.getTransceivers()).call(_context, function (transceiver) {
@@ -3092,18 +3098,29 @@
 
 
 	    if (localVideo && localVideo.srcObject) {
-	      var _context2;
-
+	      var tracks = localVideo.srcObject.getTracks();
 	      localVideo.pause();
 
-	      forEach$2(_context2 = localVideo.srcObject.getTracks()).call(_context2, function (track) {
+	      forEach$2(tracks).call(tracks, function (track, index) {
 	        track.stop();
 	      });
 	    } // Close the peer connection
 
 
-	    pCon.close(); // user.myPeerConnection = {}
-	    // user.webcamStream = null
+	    if (pCon) {
+	      pCon.close();
+	    }
+
+	    var cellDom = localVideo.parentElement;
+	    var listDom = cellDom.parentElement;
+
+	    if (listDom && cellDom) {
+	      listDom.removeChild(cellDom);
+	    }
+	  }
+
+	  if (user['myPeerConnection'][targetUserId]) {
+	    delete user['myPeerConnection'][targetUserId];
 	  }
 
 	  if (user['targetUsers'][targetUserId]) {
@@ -3121,30 +3138,30 @@
 	};
 	var openLocalVideo = /*#__PURE__*/function () {
 	  var _ref = asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee(user) {
-	    return regenerator.wrap(function _callee$(_context3) {
+	    return regenerator.wrap(function _callee$(_context2) {
 	      while (1) {
-	        switch (_context3.prev = _context3.next) {
+	        switch (_context2.prev = _context2.next) {
 	          case 0:
-	            _context3.prev = 0;
-	            _context3.next = 3;
+	            _context2.prev = 0;
+	            _context2.next = 3;
 	            return navigator.mediaDevices.getUserMedia(MEDIA_CONSTRAINTS);
 
 	          case 3:
-	            user.webcamStream = _context3.sent;
+	            user.webcamStream = _context2.sent;
 	            document.getElementById('video-' + user.clientId).srcObject = user.webcamStream;
-	            _context3.next = 10;
+	            _context2.next = 10;
 	            break;
 
 	          case 7:
-	            _context3.prev = 7;
-	            _context3.t0 = _context3["catch"](0);
-	            handleGetUserMediaError(_context3.t0, function (user) {
+	            _context2.prev = 7;
+	            _context2.t0 = _context2["catch"](0);
+	            handleGetUserMediaError(_context2.t0, function (user) {
 	              closeVideoCall(user);
 	            });
 
 	          case 10:
 	          case "end":
-	            return _context3.stop();
+	            return _context2.stop();
 	        }
 	      }
 	    }, _callee, null, [[0, 7]]);
@@ -3156,27 +3173,27 @@
 	}();
 	var createVideoList = /*#__PURE__*/function () {
 	  var _ref2 = asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee2(msg, user) {
-	    var _context4;
+	    var _context3;
 
 	    var listElem, needOpenLocalVideo;
-	    return regenerator.wrap(function _callee2$(_context6) {
+	    return regenerator.wrap(function _callee2$(_context5) {
 	      while (1) {
-	        switch (_context6.prev = _context6.next) {
+	        switch (_context5.prev = _context5.next) {
 	          case 0:
 	            listElem = document.querySelector('.chat-user-list');
 	            needOpenLocalVideo = false;
 
-	            forEach$2(_context4 = msg.users).call(_context4, function (userItem) {
+	            forEach$2(_context3 = msg.users).call(_context3, function (userItem) {
 	              var userCellId = 'user-' + userItem.clientId;
 	              var videoCellId = 'video-' + userItem.clientId;
 
 	              if (!document.querySelector('#' + userCellId)) {
-	                var _context5;
+	                var _context4;
 
 	                needOpenLocalVideo = userItem.clientId === user.clientId;
 	                var item = document.createElement('li');
 
-	                var videoStr = concat$2(_context5 = "<video id='".concat(videoCellId, "' autoplay ")).call(_context5, needOpenLocalVideo ? 'muted' : '', "></video>");
+	                var videoStr = concat$2(_context4 = "<video id='".concat(videoCellId, "' autoplay ")).call(_context4, needOpenLocalVideo ? 'muted' : '', " width=\"320\"></video>");
 
 	                var nameText = "<b>".concat(userItem.username, "</b>");
 	                item.setAttribute('id', userCellId);
@@ -3186,16 +3203,16 @@
 	            });
 
 	            if (!needOpenLocalVideo) {
-	              _context6.next = 6;
+	              _context5.next = 6;
 	              break;
 	            }
 
-	            _context6.next = 6;
+	            _context5.next = 6;
 	            return openLocalVideo(user);
 
 	          case 6:
 	          case "end":
-	            return _context6.stop();
+	            return _context5.stop();
 	        }
 	      }
 	    }, _callee2);
@@ -3759,6 +3776,33 @@
 	      this.myUsername = name;
 	    }
 	  }, {
+	    key: "setSocket",
+	    value: function setSocket(socket) {
+	      this.socket = socket;
+	    }
+	  }, {
+	    key: "login",
+	    value: function login(opts) {
+	      this.setUserName(opts.userName);
+	      this.socket.connect();
+	    }
+	  }, {
+	    key: "logout",
+	    value: function logout() {
+	      this.socket.sendToServer({
+	        type: 'hang-up',
+	        id: this.clientId,
+	        username: this.myUsername
+	      });
+	    }
+	  }, {
+	    key: "removeUser",
+	    value: function removeUser(msg) {
+	      closeVideoCall(this, {
+	        clientId: msg.id
+	      });
+	    }
+	  }, {
 	    key: "createUserList",
 	    value: function () {
 	      var _createUserList = asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee(msg) {
@@ -3814,7 +3858,7 @@
 
 	          _this.createPeerConnection(targetUserInfo);
 	        }
-	      }, 3000);
+	      }, 2000);
 	    }
 	  }, {
 	    key: "handleNewICECandidateMsg",
@@ -3891,20 +3935,15 @@
 	    classCallCheck(this, Socket);
 
 	    var exploreSocket = options.exploreSocket,
-	        user = options.user,
-	        setSocket = options.setSocket;
+	        user = options.user;
 	    this.ws = null;
 	    this.myHostname = 'localhost';
 	    this.options = options;
 	    this.user = user;
 	    this.getHostName();
 
-	    if (exploreSocket) {
+	    if (exploreSocket && typeof exploreSocket === 'function') {
 	      exploreSocket(this);
-	    }
-
-	    if (setSocket && typeof setSocket === 'function') {
-	      setSocket(this);
 	    }
 	  }
 
@@ -3977,7 +4016,8 @@
 	          handleNewICECandidateMsg = _this$options.handleNewICECandidateMsg,
 	          handleVideoOfferMsg = _this$options.handleVideoOfferMsg,
 	          handleVideoAnswerMsg = _this$options.handleVideoAnswerMsg,
-	          handleChatMessage = _this$options.handleChatMessage;
+	          handleChatMessage = _this$options.handleChatMessage,
+	          handleHangUpMsg = _this$options.handleHangUpMsg;
 
 	      switch (msg.type) {
 	        case 'id':
@@ -4027,7 +4067,7 @@
 
 	        case 'hang-up':
 	          // The other peer has hung up the call
-	          // handleHangUpMsg(msg)
+	          handleHangUpMsg(msg);
 	          break;
 	        // Unknown message; output to console for debugging.
 
@@ -4048,21 +4088,41 @@
 	var addEvents = function addEvents(options) {
 	  var userInput = document.querySelector('#name');
 	  var btnLogin = document.querySelector('#btn-login');
-	  var enterEvent = options.enterEvent,
-	      loginEvent = options.loginEvent;
+	  var login = options.login;
 	  userInput.addEventListener('keyup', function (evt) {
 	    if (evt.keyCode === 13 || evt.keyCode === 14) {
-	      enterEvent({
+	      login({
 	        userName: userInput.value,
 	        evt: evt
 	      });
 	    }
 	  });
 	  btnLogin.addEventListener('click', function (evt) {
-	    loginEvent({
+	    login({
 	      userName: userInput.value,
 	      evt: evt
 	    });
+	  });
+	};
+
+	function doLogout(options, evt) {
+	  var logout = options.logout;
+
+	  if (logout && typeof logout === 'function') {
+	    logout();
+	  }
+
+	  evt.stopPropagation();
+	  window.location.reload();
+	}
+
+	var addEvents$1 = function addEvents(options) {
+	  var btnExit = document.querySelector('#exit-meeting');
+	  btnExit.addEventListener('click', function (evt) {
+	    doLogout(options, evt);
+	  });
+	  window.addEventListener('unload', function (evt) {
+	    doLogout(options, evt);
 	  });
 	};
 
@@ -4135,8 +4195,9 @@
 	  function Chat(options) {
 	    classCallCheck(this, Chat);
 
-	    this.user = options.user;
-	    this.socket = options.socket;
+	    this.user = options.user; // this.socket = options.socket
+
+	    this.socket = null;
 	    this.addEvents();
 	  }
 
@@ -4159,6 +4220,11 @@
 
 	        event.stopPropagation();
 	      });
+	    }
+	  }, {
+	    key: "setSocket",
+	    value: function setSocket(socket) {
+	      this.socket = socket;
 	    }
 	  }, {
 	    key: "sendMessage",
@@ -4204,11 +4270,9 @@
 	  });
 	  var socket = new Socket({
 	    user: user,
-	    setSocket: function setSocket(socket) {
-	      chat.socket = socket;
-	    },
 	    exploreSocket: function exploreSocket(socket) {
-	      user.socket = socket;
+	      chat.setSocket(socket);
+	      user.setSocket(socket);
 	    },
 	    handleUserListMsg: function handleUserListMsg(msg) {
 	      user.createUserList(msg);
@@ -4227,17 +4291,21 @@
 	    },
 	    handleChatMessage: function handleChatMessage(msg) {
 	      chat.showMessage(msg);
+	    },
+	    handleHangUpMsg: function handleHangUpMsg(msg) {
+	      user.removeUser(msg);
 	    }
 	  });
 	  addEvents({
-	    enterEvent: function enterEvent(opts) {
-	      user.setUserName(opts.userName);
-	      socket.connect();
-	    },
-	    loginEvent: function loginEvent(opts) {
-	      // console.info('-===loginEvent===', opts)
-	      user.setUserName(opts.userName);
-	      socket.connect();
+	    socket: socket,
+	    login: function login(opts) {
+	      user.login(opts);
+	    }
+	  });
+	  addEvents$1({
+	    socket: socket,
+	    logout: function logout() {
+	      user.logout();
 	    }
 	  });
 	}

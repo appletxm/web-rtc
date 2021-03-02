@@ -1,7 +1,8 @@
 const Chat = class {
   constructor(options) {
     this.user = options.user
-    this.socket = options.socket
+    // this.socket = options.socket
+    this.socket = null
     this.addEvents()
   }
 
@@ -19,6 +20,10 @@ const Chat = class {
       this.sendMessage()
       event.stopPropagation()
     })
+  }
+
+  setSocket(socket) {
+    this.socket = socket
   }
 
   sendMessage() {

@@ -4,9 +4,14 @@ import { handleGetUserMediaError, log } from './log'
 export const closeVideoCall = function(user, targetUserInfo) {
   const { myPeerConnection } = user
   const targetUserId = targetUserInfo.clientId
-  const pCon = myPeerConnection[targetUserId]
+  const pConInstance = myPeerConnection[targetUserId]
 
-  var localVideo = document.getElementById('video-' + targetUserId)
+  if (!pConInstance) {
+    return false
+  }
+
+  const pCon = pConInstance.connect
+  const localVideo = document.getElementById('video-' + targetUserId)
 
   log('Closing the call', targetUserInfo)
 
@@ -25,7 +30,7 @@ export const closeVideoCall = function(user, targetUserInfo) {
 
     // Stop all transceivers on the connection
 
-    if (pCon && pCon.getTransceivers) {
+    if (pCon.getTransceivers) {
       pCon.getTransceivers().forEach(transceiver => {
         transceiver.stop()
       })
@@ -36,17 +41,28 @@ export const closeVideoCall = function(user, targetUserInfo) {
     // on it.
 
     if (localVideo && localVideo.srcObject) {
+      const tracks = localVideo.srcObject.getTracks()
       localVideo.pause()
-      localVideo.srcObject.getTracks().forEach(track => {
+      tracks.forEach((track, index) => {
         track.stop()
       })
     }
 
     // Close the peer connection
+    if (pCon) {
+      pCon.close()
+    }
 
-    pCon.close()
-    // user.myPeerConnection = {}
-    // user.webcamStream = null
+    const cellDom = localVideo.parentElement
+    const listDom = cellDom.parentElement
+
+    if (listDom && cellDom) {
+      listDom.removeChild(cellDom)
+    }
+  }
+
+  if (user['myPeerConnection'][targetUserId]) {
+    delete user['myPeerConnection'][targetUserId]
   }
 
   if (user['targetUsers'][targetUserId]) {
@@ -84,7 +100,7 @@ export const createVideoList = async function (msg, user) {
       needOpenLocalVideo = userItem.clientId === user.clientId
 
       var item = document.createElement('li')
-      var videoStr = `<video id='${videoCellId}' autoplay ${needOpenLocalVideo ? 'muted' : ''}></video>`
+      var videoStr = `<video id='${videoCellId}' autoplay ${needOpenLocalVideo ? 'muted' : ''} width="320"></video>`
       var nameText = `<b>${userItem.username}</b>`
 
       item.setAttribute('id', userCellId)

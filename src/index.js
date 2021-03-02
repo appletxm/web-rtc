@@ -4,22 +4,19 @@ import 'regenerator-runtime/runtime'
 import User from './user'
 import Socket from './socket'
 import { addEvents as loginEvent } from './login'
+import { addEvents as logoutEvent } from './logout'
 import Chat from './chat'
 
 function bootStrap() {
-  const user = new User()
-  const chat = new Chat(
-    {
-      user
-    }
+  let user = new User()
+  let chat = new Chat(
+    { user }
   )
-  const socket = new Socket({
+  let socket = new Socket({
     user,
-    setSocket(socket) {
-      chat.socket = socket
-    },
     exploreSocket(socket) {
-      user.socket = socket
+      chat.setSocket(socket)
+      user.setSocket(socket)
     },
     handleUserListMsg(msg) {
       user.createUserList(msg)
@@ -38,18 +35,23 @@ function bootStrap() {
     },
     handleChatMessage(msg) {
       chat.showMessage(msg)
+    },
+    handleHangUpMsg(msg) {
+      user.removeUser(msg)
     }
   })
 
   loginEvent({
-    enterEvent(opts) {
-      user.setUserName(opts.userName)
-      socket.connect()
-    },
-    loginEvent(opts) {
-      // console.info('-===loginEvent===', opts)
-      user.setUserName(opts.userName)
-      socket.connect()
+    socket,
+    login(opts) {
+      user.login(opts)
+    }
+  })
+
+  logoutEvent({
+    socket,
+    logout() {
+      user.logout()
     }
   })
 }

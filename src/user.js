@@ -1,4 +1,4 @@
-import { createVideoList } from './video-list'
+import { createVideoList, closeVideoCall } from './video-list'
 import { Connection } from './connection'
 
 const User = class {
@@ -20,6 +20,29 @@ const User = class {
 
   setUserName(name) {
     this.myUsername = name
+  }
+
+  setSocket(socket) {
+    this.socket = socket
+  }
+
+  login(opts) {
+    this.setUserName(opts.userName)
+    this.socket.connect()
+  }
+
+  logout() {
+    this.socket.sendToServer({
+      type: 'hang-up',
+      id: this.clientId,
+      username: this.myUsername
+    })
+  }
+
+  removeUser(msg) {
+    closeVideoCall(this, {
+      clientId: msg.id
+    })
   }
 
   async createUserList(msg) {
@@ -49,7 +72,7 @@ const User = class {
         }
         this.createPeerConnection(targetUserInfo)
       }
-    }, 3000)
+    }, 2000)
   }
 
   handleNewICECandidateMsg(msg) {
